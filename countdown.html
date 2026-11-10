@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Countdown ♥</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FBF7F2; --beige:#EFE5D8; --taupe:#B8A99A; --ink:#6B5A4E;
+    --pink:#E8A6B0; --pink-deep:#D98E9C; --pink-light:#F6D6DA;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);overflow:hidden}
+  body{font-family:"Press Start 2P",ui-monospace,Menlo,monospace;color:var(--ink);
+       -webkit-font-smoothing:none;user-select:none;-webkit-user-select:none}
+  #stage{position:fixed;inset:0}
+  #bg{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;z-index:0;pointer-events:none}
+  #countdown{z-index:1}
+  #kiss{position:absolute;z-index:2;border:0;background:none;cursor:pointer;line-height:1;padding:4px;opacity:.75;
+        transform:translate(-50%,-50%);-webkit-tap-highlight-color:transparent;
+        filter:drop-shadow(0 3px 0 rgba(217,142,156,.35));animation:kissfloat 2.6s ease-in-out infinite}
+  #kiss.pop{animation:kisspop .45s ease-out}
+  @keyframes kissfloat{50%{transform:translate(-50%,-58%)}}
+  @keyframes kisspop{30%{transform:translate(-50%,-50%) scale(1.35) rotate(-8deg)}100%{transform:translate(-50%,-50%) scale(1)}}
+  .mwah{position:absolute;z-index:3;pointer-events:none;color:var(--pink-deep);white-space:nowrap;
+        text-shadow:2px 2px 0 #fff;animation:mwah 1.4s ease-out forwards}
+  @keyframes mwah{0%{opacity:0;transform:translate(-50%,0) scale(.6)}
+                  15%{opacity:1;transform:translate(-50%,-14px) scale(1.1)}
+                  100%{opacity:0;transform:translate(calc(-50% + var(--dx)),-90px) scale(1)}}
+  canvas{position:fixed;inset:0;width:100%;height:100%;image-rendering:pixelated;z-index:20;pointer-events:none}
+
+  /* ---------- countdown ---------- */
+  #countdown{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+             text-align:center;pointer-events:none}
+  #countdown{--f:40px}
+  #title{font-size:calc(var(--f)*.32);line-height:1.8;color:var(--taupe);margin-bottom:calc(var(--f)*.6);letter-spacing:1px}
+  #units{display:grid;grid-template-columns:repeat(4,auto);justify-content:center;gap:calc(var(--f)*.45)}
+  #units.grid{grid-template-columns:repeat(2,auto)}
+  .unit{display:flex;flex-direction:column;align-items:center;gap:calc(var(--f)*.25)}
+  .num{font-size:var(--f);line-height:1;color:var(--pink-deep);
+       background:#fff;border:4px solid var(--beige);border-radius:8px;
+       padding:calc(var(--f)*.35) calc(var(--f)*.3);min-width:2.6em;
+       box-shadow:0 5px 0 var(--beige)}
+  .lbl{font-size:calc(var(--f)*.26);color:var(--taupe);letter-spacing:1px}
+  #done{display:none;font-size:calc(var(--f)*.6);color:var(--pink-deep);line-height:1.6}
+  .finished #units{display:none}
+  .finished #done{display:block}
+
+  /* ---------- curtain ---------- */
+  #curtain{position:fixed;inset:0;z-index:10;cursor:pointer}
+  .drape{position:absolute;top:0;bottom:0;width:51%;will-change:transform;
+         background:
+           linear-gradient(180deg,rgba(255,255,255,.18),rgba(0,0,0,.06)),
+           repeating-linear-gradient(90deg,
+             var(--pink) 0 14px, var(--pink-deep) 14px 22px,
+             var(--pink) 22px 30px, var(--pink-light) 30px 36px)}
+  .drape.left{left:0;transform-origin:left;box-shadow:inset -8px 0 0 rgba(0,0,0,.06)}
+  .drape.right{right:0;transform-origin:right;box-shadow:inset 8px 0 0 rgba(0,0,0,.06)}
+  /* fluffy white trim */
+  .drape::after,.drape::before,#fluff{content:"";position:absolute;pointer-events:none;
+     filter:drop-shadow(0 2px 0 rgba(160,110,120,.25))}
+  .drape::after{top:0;bottom:0;width:26px;
+     background:
+       radial-gradient(circle at 50% 50%,#fff 9px,transparent 10px) 0 0/26px 15px repeat-y,
+       radial-gradient(circle at 35% 50%,#FFF8F9 8px,transparent 9px) 0 7px/26px 15px repeat-y,
+       radial-gradient(circle at 65% 50%,#fff 7px,transparent 8px) 0 4px/26px 15px repeat-y}
+  .drape.left::after{right:-6px}
+  .drape.right::after{left:-6px}
+  .drape::before{left:0;right:0;bottom:-4px;height:26px;
+     background:
+       radial-gradient(circle at 50% 50%,#fff 9px,transparent 10px) 0 0/15px 26px repeat-x,
+       radial-gradient(circle at 50% 35%,#FFF8F9 8px,transparent 9px) 7px 0/15px 26px repeat-x}
+  #fluff{left:0;right:0;top:24px;height:28px;z-index:3;
+     background:
+       radial-gradient(circle at 50% 50%,#fff 10px,transparent 11px) 0 0/16px 28px repeat-x,
+       radial-gradient(circle at 50% 35%,#FFF8F9 9px,transparent 10px) 8px 0/16px 28px repeat-x;
+     transition:transform .8s ease-in .5s}
+  #curtain.lift #fluff{transform:translateY(-300%)}
+  #valance{position:absolute;left:0;right:0;top:0;height:58px;z-index:2;
+           background:var(--pink-deep);
+           -webkit-mask:radial-gradient(circle at 20px 38px,#000 20px,transparent 21px) 0 0/40px 100% repeat-x,
+                        linear-gradient(#000,#000) 0 0/100% 38px no-repeat;
+                   mask:radial-gradient(circle at 20px 38px,#000 20px,transparent 21px) 0 0/40px 100% repeat-x,
+                        linear-gradient(#000,#000) 0 0/100% 38px no-repeat;
+           transition:transform .8s ease-in .5s}
+  #tap{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);z-index:3;
+       font-size:clamp(10px,2.8vw,14px);color:#fff;text-shadow:2px 2px 0 #B86F7E;
+       background:rgba(184,111,126,.85);border:3px solid #fff;border-radius:8px;padding:16px 20px;
+       box-shadow:0 4px 0 rgba(120,60,75,.35);
+       animation:pulse 1.4s ease-in-out infinite;white-space:nowrap}
+  @keyframes pulse{50%{transform:translate(-50%,-50%) scale(1.06)}}
+  #curtain.open{pointer-events:none}
+  #curtain.lift #valance{transform:translateY(-110%)}
+  #curtain.open #tap{opacity:0;transition:opacity .2s}
+  .drape.away{transition:transform .8s ease-in}
+  #curtain.gone{display:none}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="bg"></canvas>
+  <div id="countdown">
+    <div id="title"></div>
+    <div id="units">
+      <div class="unit"><div class="num" id="d">00</div><div class="lbl">DAYS</div></div>
+      <div class="unit"><div class="num" id="h">00</div><div class="lbl">HRS</div></div>
+      <div class="unit"><div class="num" id="m">00</div><div class="lbl">MIN</div></div>
+      <div class="unit"><div class="num" id="s">00</div><div class="lbl">SEC</div></div>
+    </div>
+    <div id="done"></div>
+  </div>
+  <button id="kiss" aria-label="send a kiss">😘</button>
+</div>
+
+<canvas id="c"></canvas>
+<div id="curtain">
+  <div class="drape left"></div>
+  <div class="drape right"></div>
+  <div id="valance"></div>
+  <div id="fluff"></div>
+  <div id="tap">tap to open ♥</div>
+</div>
+
+<script>
+/* =====================================================
+   SETTINGS: edit these to update the page
+   ===================================================== */
+const CONFIG = {
+  // Visit date & time. +11:00 = Sydney summer time (AEDT).
+  target: "2027-01-21T16:00:00+11:00",
+  title: "until we're together again",
+  doneMessage: "see you soon! ♥",
+  tapToOpen: true,          // false = pets open the curtain by themselves
+  // Labradoodle colours
+  dog: { o: "#7A5C47", b: "#EBCFA6", w: "#F8EBD3", d: "#D6A877", k: "#3A2A22" },
+  // Siamese colours (cream body, seal-brown points, blue eyes)
+  cat: { o: "#5A4034", b: "#F1E4D0", w: "#FBF5EC", d: "#5A3F33", e: "#7FB3E0", k: "#2B2220" },
+};
+/* ===================================================== */
+
+// Pixel sprites, facing right, feet on the bottom row.
+// o outline · b body · w highlight · d dark/points · e eye colour · k eye/nose
+const DOG_TOP = [
+  "..oo......oooo....",
+  ".obbo....obwbwo...",
+  "obwbo...obbbbbbo..",
+  "obbo....odbbkbbbo.",
+  ".obo....oddbbbbbbo",
+  ".obo....oddwbbbbbk",
+  "..obo...oodwwbboo.",
+  "..obboooobbbbbbo..",
+];
+const DOG_BODY = ["..obwbwbbbwbbbwbo.", "...obbbbbbbbbbbbo.", "...obwbbwbbbbwbo.."];
+const DOG_PULL_BODY = ["..obwbwbbbwbbbwbbo", "...obbbbbbbbbbbboo", "...obwbbwbbbbwbo.."];
+const DOG_LEGS = [["...obbo.....obbo..", "...ooo......ooo..."], [".....obbo.obbo....", ".....ooo..ooo....."]];
+const DOG_PULL_LEGS = [["...obbo...........", "...ooo............"], [".....obbo.........", ".....ooo.........."]];
+
+const CAT_TOP = [
+  "...........o...o..",
+  ".o........odo.odo.",
+  "odo.......obbbbbo.",
+  "odo.......obedebo.",
+  ".odo......obdddbo.",
+  "..odo......obdbo..",
+  "...odoooooobbbbo..",
+];
+const CAT_BODY = ["...obbbbbbbbbbwo..", "...obbbbbbbbbbwo..", "....obbbbbbbbbo..."];
+const CAT_PULL_BODY = ["...obbbbbbbbbbwddo", "...obbbbbbbbbbwoo.", "....obbbbbbbbbo..."];
+const CAT_LEGS = [["...odo.......odo..", "...oo........oo..."], [".....odo...odo....", ".....oo....oo....."]];
+const CAT_PULL_LEGS = [["...odo............", "...oo............."], [".....odo..........", ".....oo..........."]];
+
+// Join top + body + legs, and draw an outline under the belly between the legs
+function build(top, body, legs) {
+  const under = body[body.length - 1];
+  const first = [...legs[0]].map((ch, c) => (ch === "." && under[c] && under[c] !== ".") ? "o" : ch).join("");
+  return top.concat(body, [first], legs.slice(1));
+}
+const DOG = [0, 1].map(i => build(DOG_TOP, DOG_BODY, DOG_LEGS[i]));
+const DOG_PULL = [0, 1].map(i => build(DOG_TOP, DOG_PULL_BODY, DOG_PULL_LEGS[i]));
+const CAT = [0, 1].map(i => build(CAT_TOP, CAT_BODY, CAT_LEGS[i]));
+const CAT_PULL = [0, 1].map(i => build(CAT_TOP, CAT_PULL_BODY, CAT_PULL_LEGS[i]));
+const SPRITE_W = 18;
+const HEART = [".pp.pp.", "ppppppp", "ppppppp", ".ppppp.", "..ppp..", "...p..."];
+const HEART_PAL = { p: "#E8A6B0" };
+
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+const $ = id => document.getElementById(id);
+let W, H, S, BIG, frame, perim;
+
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  W = innerWidth; H = innerHeight;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  S = W < 520 ? 2.5 : 3.5;                       // pixel size on the frame
+  BIG = Math.min(W / 90, 7);                      // pixel size during the curtain scene
+  const margin = 13 * S + 16;
+  const fw = Math.min(W - margin * 2, 820);
+  const fh = Math.min(H - margin * 2, 520);
+  const r = Math.min(36, fh / 4);
+  frame = { x: (W - fw) / 2, y: (H - fh) / 2, w: fw, h: fh, r };
+  perim = 2 * (fw - 2 * r) + 2 * (fh - 2 * r) + 2 * Math.PI * r;
+
+  // Size the countdown to fill the frame
+  const inner = fw - 40, tall = fh - 40;
+  const grid = fw < fh * 1.15;                   // portrait → 2×2 boxes
+  $("units").classList.toggle("grid", grid);
+  const cols = grid ? 2 : 4, rows = grid ? 2 : 1;
+  // box ≈ 2.95f wide, ≈ 2.4f tall incl. label; plus title ≈ 1f
+  const fW = inner / (cols * 2.95 + (cols - 1) * 0.45);
+  const fH = tall / (rows * 2.5 + (rows - 1) * 0.45 + 1.4);
+  const f = Math.floor(Math.min(fW, fH, 88) * 0.78);
+  $("countdown").style.setProperty("--f", f + "px");
+  $("countdown").style.width = inner + "px";
+  placeKiss(f);
+  setupGlobe();
+}
+
+// Position + direction at distance d along the frame (clockwise)
+function pointAt(d) {
+  const { x, y, w, h, r } = frame;
+  const sw = w - 2 * r, sh = h - 2 * r, arc = Math.PI * r / 2, P = Math.PI;
+  d = ((d % perim) + perim) % perim;
+  const segs = [
+    [sw,  t => ({ x: x + r + t, y, a: 0 })],
+    [arc, t => { const th = -P / 2 + t / r; return { x: x + w - r + r * Math.cos(th), y: y + r + r * Math.sin(th), a: th + P / 2 }; }],
+    [sh,  t => ({ x: x + w, y: y + r + t, a: P / 2 })],
+    [arc, t => { const th = t / r; return { x: x + w - r + r * Math.cos(th), y: y + h - r + r * Math.sin(th), a: th + P / 2 }; }],
+    [sw,  t => ({ x: x + w - r - t, y: y + h, a: P })],
+    [arc, t => { const th = P / 2 + t / r; return { x: x + r + r * Math.cos(th), y: y + h - r + r * Math.sin(th), a: th + P / 2 }; }],
+    [sh,  t => ({ x, y: y + h - r - t, a: -P / 2 })],
+    [arc, t => { const th = P + t / r; return { x: x + r + r * Math.cos(th), y: y + r + r * Math.sin(th), a: th + P / 2 }; }],
+  ];
+  for (const [len, f] of segs) { if (d <= len) return f(d); d -= len; }
+  return segs[0][1](0);
+}
+
+function drawSprite(rows, pal, px, py, angle, scale, flip = false) {
+  const h = rows.length;
+  ctx.save();
+  ctx.translate(px, py);
+  ctx.rotate(angle);
+  if (flip) ctx.scale(-1, 1);
+  for (let r = 0; r < h; r++) for (let c = 0; c < rows[r].length; c++) {
+    const ch = rows[r][c];
+    if (ch === "." || !pal[ch]) continue;
+    ctx.fillStyle = pal[ch];
+    ctx.fillRect(Math.round((c - SPRITE_W / 2) * scale), Math.round((r - h) * scale), Math.ceil(scale), Math.ceil(scale));
+  }
+  ctx.restore();
+}
+
+function drawFrame(alpha) {
+  const { x, y, w, h, r } = frame;
+  ctx.globalAlpha = alpha;
+  ctx.lineWidth = 6; ctx.strokeStyle = "#D9CBBB";
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.stroke();
+  ctx.lineWidth = 2; ctx.strokeStyle = "#F0C7CD"; ctx.setLineDash([6, 8]);
+  ctx.beginPath(); ctx.roundRect(x + 12, y + 12, w - 24, h - 24, Math.max(r - 12, 4)); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.globalAlpha = 1;
+}
+
+const ease = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+const lerp = (a, b, t) => a + (b - a) * t;
+
+// ---------- animation ----------
+// waiting → pulling (pets drag the curtains open) → hopping (onto the frame) → running
+const PULL = 1.9, PAUSE = 0.35, HOP = 0.9, SPEED = 85;
+let state = "waiting", t0 = 0, last = 0, dist = 0, hearts = [], nextHeart = 0, finished = false;
+const L = $("curtain").querySelector(".left"), R = $("curtain").querySelector(".right");
+const gapAt = now => 100 + 30 * Math.sin(now / 1400);
+
+// Where the pets stand in the curtain scene, given how far the curtain is open (0–1)
+function stagePos(p) {
+  const cx = W / 2, floor = H * 0.8, half = SPRITE_W / 2 * BIG;
+  const end = SPRITE_W * BIG + 10;
+  const pawL = lerp(cx - 3, end, p), pawR = lerp(cx + 3, W - end, p);
+  return { pawL, pawR, dog: { x: pawL - half, y: floor }, cat: { x: pawR + half, y: floor } };
+}
+function setDrapes(pawL, pawR) {
+  L.style.transform = `translateX(${pawL - W * 0.51 + 4}px)`;
+  R.style.transform = `translateX(${pawR - W * 0.49 - 4}px)`;
+}
+
+function tick(now) {
+  const dt = Math.min((now - last) / 1000 || 0, 0.05); last = now;
+  const t = (now - t0) / 1000;
+  const step = Math.floor(now / 130) % 2;
+  ctx.clearRect(0, 0, W, H);
+  if (state !== "waiting") drawGlobe(now);
+
+  if (state === "waiting") {
+    const s = stagePos(0);
+    setDrapes(s.pawL, s.pawR);
+    const bob = Math.floor(now / 500) % 2;      // little idle wiggle
+    drawSprite(DOG_PULL[bob], CONFIG.dog, s.dog.x, s.dog.y, 0, BIG);
+    drawSprite(CAT_PULL[1 - bob], CONFIG.cat, s.cat.x, s.cat.y, 0, BIG, true);
+  }
+
+  else if (state === "pulling") {
+    const p = ease(Math.min(t / PULL, 1));
+    const s = stagePos(p);
+    setDrapes(s.pawL, s.pawR);
+    const hop = t < PULL ? Math.abs(Math.sin(now / 130)) * BIG : 0;
+    drawSprite(DOG_PULL[step], CONFIG.dog, s.dog.x, s.dog.y - hop, 0, BIG);
+    drawSprite(CAT_PULL[1 - step], CONFIG.cat, s.cat.x, s.cat.y - hop, 0, BIG, true);
+    if (t >= PULL && !$("curtain").classList.contains("lift")) {
+      $("curtain").classList.add("lift");
+      L.classList.add("away"); R.classList.add("away");
+      L.style.transform = "translateX(-101%)"; R.style.transform = "translateX(101%)";
+    }
+    if (t >= PULL + PAUSE) { state = "hopping"; t0 = now; }
+  }
+
+  else if (state === "hopping") {
+    const q = ease(Math.min(t / HOP, 1));
+    const s = stagePos(1);
+    dist = (frame.w - 2 * frame.r) * 0.12;
+    const gap = gapAt(now);
+    const dEnd = pointAt(dist), cEnd = pointAt(dist + gap);
+    const arc = Math.sin(Math.PI * q) * 70;
+    drawFrame(q);
+    drawSprite(DOG[step], CONFIG.dog, lerp(s.dog.x, dEnd.x, q), lerp(s.dog.y, dEnd.y - 3, q) - arc, 0, lerp(BIG, S, q));
+    drawSprite(CAT[step], CONFIG.cat, lerp(s.cat.x, cEnd.x, q), lerp(s.cat.y, cEnd.y - 3, q) - arc, 0, lerp(BIG, S, q), q < 0.9);
+    if (t >= HOP) { state = "running"; $("curtain").classList.add("gone"); }
+  }
+
+  else { // running
+    drawFrame(1);
+    dist += SPEED * (finished ? 1.6 : 1) * dt;
+    const gap = gapAt(now);
+    const dog = pointAt(dist), cat = pointAt(dist + gap);
+    const lift = 3, nx = a => Math.sin(a) * lift, ny = a => -Math.cos(a) * lift;
+    drawSprite(DOG[step], CONFIG.dog, dog.x + nx(dog.a), dog.y + ny(dog.a), dog.a, S);
+    drawSprite(CAT[(step + 1) % 2], CONFIG.cat, cat.x + nx(cat.a), cat.y + ny(cat.a), cat.a, S);
+    if (now > nextHeart) {
+      const mid = pointAt(dist + gap / 2);
+      hearts.push({ x: mid.x + Math.sin(mid.a) * 44, y: mid.y - Math.cos(mid.a) * 44, life: 0 });
+      nextHeart = now + (finished ? 500 : 2600);
+    }
+  }
+
+  hearts = hearts.filter(h => h.life < 1.6);
+  for (const h of hearts) {
+    h.life += dt; h.y -= 18 * dt;
+    ctx.globalAlpha = Math.max(0, 1 - h.life / 1.6);
+    drawSprite(HEART, HEART_PAL, h.x + SPRITE_W / 2 * S * 0.8 - 3.5 * S * 0.8, h.y, 0, S * 0.8);
+    ctx.globalAlpha = 1;
+  }
+  requestAnimationFrame(tick);
+}
+
+const GLOBE = [
+  ".........................................~~~~~~~~~~####.........................................",
+  "....................................~~~~~~~~~~~~~~~~~~##~###....................................",
+  ".................................###~#~~~~~~~~~~~~~~~~~~~~~~~~~.................................",
+  "..............................######~~~~~~~~~~~~~~~~~~~~~~~~~#~###..............................",
+  "............................#######~~~~#~~~~~~~~~~~~~~~~~~~~~~~#~#~#............................",
+  "..........................##########~#~~~~~~~~~~~~~~~~~~~~~#####~###~~..........................",
+  "........................###############~~~~~~~~~~~~~~~~~~~~~###~#####~~#........................",
+  "......................######################~~~~~~~###################~~~#......................",
+  ".....................##########################~~~~####################~~~~.....................",
+  "...................##############################~#########################~#...................",
+  "..................###########################~~~~~~~##########################..................",
+  ".................###################~#~####~~~~~~~~############################.................",
+  "................############~~~~~~~~~#~~~~~~~~~~~~#~####~~~~~~~#################................",
+  "...............###########~~~~~~~~~###~~~~~~~~~~~~~~~~~##~~~~~~~~~###############...............",
+  "..............#############~~~~~~~###~~~~~~~~~~~~~~~~~#~~~~~~~~~~~~###############..............",
+  ".............###############~~~~~##~~~~~~~~~~~~~~~~~#~~~~~~~~~~~~~~~###############.............",
+  "............###############~~~~~~#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~###############............",
+  "...........##############~~~~~~~~~~~~~~~~~~~~~#~~~~~~~~~~~~~~~~~~~~~~~~~~############...........",
+  "..........#############~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#############..........",
+  ".........#############~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##############.........",
+  ".........###########~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#############.........",
+  "........#####~####~~~~###~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#############........",
+  ".......######~~#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#############~.......",
+  ".......######~~#~~~~~#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#############.......",
+  "......#####~~~##~~~~#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#############......",
+  "......#####~~~#~~~##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~###########~......",
+  ".....######~~~~#####~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##########~~.....",
+  ".....######~~~##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~########~~.....",
+  "....######~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#~#####~~~....",
+  "....######~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#######~~....",
+  "...#####~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#~####~~~...",
+  "...#####~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#~###~~~...",
+  "...####~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~###~#...",
+  "..#~~~~#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##~~~..",
+  "..#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~###~~..",
+  "..##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~####..",
+  ".~#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~####.",
+  ".##~~~#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#~#.",
+  ".##~~~#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.",
+  ".#~~~#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.",
+  ".#~~~#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.",
+  "~~~~~~#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+  "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+  "~~~~~##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+  "~~~#~#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+  "~~~~~##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+  "~~~~~~#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+  "~~##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+  "~~#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+  "~##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#",
+  "~##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+  "###~~#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+  "###~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+  "~~#~#~#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+  "~~~##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+  ".~~~#~~~~#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.",
+  ".~~~~~~~~#~#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.",
+  ".~#~~~~~~~####~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.",
+  ".~~#~~~~~~~####~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.",
+  ".~~~~##~~~~~####~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.",
+  "..~~~~~~~~~~#####~~~#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~..",
+  "..~~~~~~~~~~#####~~~~~#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~..",
+  "..~~~~~~~~~~~~#~~#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~..",
+  "...~~~~~~~~~~~~~~~#~~~~~##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...",
+  "...~~~~#~###~~~~~~~#~~~~~~#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...",
+  "...~~~~#####~~~#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...",
+  "....~~~#####~~~#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~....",
+  "....~~~######~~##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~....",
+  ".....~########~##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.....",
+  ".....~############~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.....",
+  "......############~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~......",
+  "......~############~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~......",
+  ".......#############~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.......",
+  ".......~#############~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.......",
+  "........~#############~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~........",
+  ".........##############~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.........",
+  ".........~##############~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.........",
+  "..........~#~~##########~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~..........",
+  "...........~~~~~#########~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...........",
+  "............~~~~~~#######~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~............",
+  ".............~~~~~~######~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.............",
+  "..............~~~~~~#####~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~..............",
+  "...............~~~~~~####~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...............",
+  "................~~~~~~~#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~................",
+  ".................~~~~~~~~~~~~~~~~~~~~~~~#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.................",
+  "..................~~~~~~~#~~~~~~~~~~~~~###~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~..................",
+  "...................~~~~~~~~~~~~~~~~~~~~##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...................",
+  ".....................~~~~~~~~~~~~~~~~~#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.....................",
+  "......................~~~~~~~~~~~~~~###~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~......................",
+  "........................~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~........................",
+  "..........................~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~..........................",
+  "............................~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~............................",
+  "..............................~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~..............................",
+  ".................................~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.................................",
+  "....................................#~~~~~~~~~~~~~~~~~~~~~~~....................................",
+  ".........................................##~~~~~~~~~~~~........................................."
+];
+
+// ---------- background globe: Vancouver → Armidale ----------
+const GLOBE_N = GLOBE.length, G_LAT0 = 12.56 * Math.PI / 180, G_LON0 = -172.97 * Math.PI / 180;
+const VAN = { lat: 49.28, lon: -123.12, name: "Vancouver" };
+const ARM = { lat: -30.51, lon: 151.67, name: "Armidale" };
+const PLANE = [
+  "....oo.....",
+  "....owo....",
+  "o...owwo...",
+  "owo.owwwo..",
+  "owwwwwwwwwo",
+  "owo.owwwo..",
+  "o...owwo...",
+  "....owo....",
+  "....oo.....",
+];
+const PIN = [".pp.pp.", "ppppppp", "ppppppp", ".ppppp.", "..ppp..", "...p..."];
+const bg = document.getElementById("bg"), bgx = bg.getContext("2d");
+let globeImg, G;   // cached globe drawing + its placement
+
+const vec = (la, lo) => { la *= Math.PI / 180; lo *= Math.PI / 180; return [Math.cos(la) * Math.cos(lo), Math.cos(la) * Math.sin(lo), Math.sin(la)]; };
+function project(v) {  // orthographic projection → screen
+  const lat = Math.asin(v[2]), lon = Math.atan2(v[1], v[0]);
+  const x = Math.cos(lat) * Math.sin(lon - G_LON0);
+  const y = Math.cos(G_LAT0) * Math.sin(lat) - Math.sin(G_LAT0) * Math.cos(lat) * Math.cos(lon - G_LON0);
+  return { x: G.cx + x * G.r, y: G.cy - y * G.r };
+}
+function slerp(a, b, t) {
+  const om = Math.acos(a[0] * b[0] + a[1] * b[1] + a[2] * b[2]), s = Math.sin(om);
+  const k1 = Math.sin((1 - t) * om) / s, k2 = Math.sin(t * om) / s;
+  return [a[0] * k1 + b[0] * k2, a[1] * k1 + b[1] * k2, a[2] * k1 + b[2] * k2];
+}
+const A = vec(VAN.lat, VAN.lon), B = vec(ARM.lat, ARM.lon);
+let route = [];
+
+function setupGlobe() {
+  const dpr = window.devicePixelRatio || 1;
+  bg.width = W * dpr; bg.height = H * dpr;
+  bgx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  bgx.imageSmoothingEnabled = false;
+  const D = Math.min(W * 0.96, H * 0.82, 940);
+  G = { cx: W / 2, cy: H / 2, r: D / 2 };
+  const cell = D / GLOBE_N;
+  globeImg = document.createElement("canvas");
+  globeImg.width = Math.ceil(D * dpr); globeImg.height = Math.ceil(D * dpr);
+  const g = globeImg.getContext("2d");
+  g.scale(dpr, dpr);
+  for (let j = 0; j < GLOBE_N; j++) for (let i = 0; i < GLOBE_N; i++) {
+    const ch = GLOBE[j][i];
+    if (ch === ".") continue;
+    g.fillStyle = ch === "#" ? "#E3D5C3" : "#E7EFF1";
+    g.fillRect(Math.floor(i * cell), Math.floor(j * cell), Math.ceil(cell) + 1, Math.ceil(cell) + 1);
+  }
+  route = [];
+  for (let k = 0; k <= 120; k++) route.push(project(slerp(A, B, k / 120)));
+}
+
+function drawGlobe(now) {
+  bgx.clearRect(0, 0, W, H);
+  bgx.globalAlpha = 0.6;
+  bgx.drawImage(globeImg, G.cx - G.r, G.cy - G.r, G.r * 2, G.r * 2);
+  // route
+  bgx.globalAlpha = 0.8;
+  bgx.strokeStyle = "#E8A6B0"; bgx.lineWidth = 2; bgx.setLineDash([5, 7]);
+  bgx.beginPath(); route.forEach((p, i) => i ? bgx.lineTo(p.x, p.y) : bgx.moveTo(p.x, p.y)); bgx.stroke();
+  bgx.setLineDash([]);
+  // end pins + labels
+  const ps = Math.max(2, G.r / 110);
+  for (const [pt, place] of [[route[0], VAN], [route[route.length - 1], ARM]]) {
+    for (let r = 0; r < PIN.length; r++) for (let c = 0; c < 7; c++) if (PIN[r][c] === "p") {
+      bgx.fillStyle = "#D98E9C"; bgx.fillRect(pt.x + (c - 3.5) * ps, pt.y + (r - 6) * ps, ps, ps);
+    }
+    bgx.fillStyle = "#B8A99A"; bgx.font = `${Math.max(7, ps * 3.5)}px "Press Start 2P", monospace`;
+    bgx.textAlign = "center"; bgx.fillText(place.name, pt.x, pt.y + ps * 6);
+  }
+  // little plane flying the route (14 s per trip, short rest at each end)
+  const cyc = (now / 1000) % 16, t = Math.min(Math.max((cyc - 1) / 14, 0), 1);
+  const k = ease(t) * (route.length - 1), i = Math.min(Math.floor(k), route.length - 2);
+  const p = route[i], q = route[i + 1], f = k - i;
+  const x = lerp(p.x, q.x, f), y = lerp(p.y, q.y, f), ang = Math.atan2(q.y - p.y, q.x - p.x);
+  bgx.save(); bgx.translate(x, y); bgx.rotate(ang);
+  const s2 = Math.max(2, G.r / 120);
+  for (let r = 0; r < PLANE.length; r++) for (let c = 0; c < PLANE[r].length; c++) {
+    const ch = PLANE[r][c]; if (ch === ".") continue;
+    bgx.fillStyle = ch === "o" ? "#D98E9C" : "#FFFFFF";
+    bgx.fillRect(Math.round((c - 5.5) * s2), Math.round((r - 4.5) * s2), Math.ceil(s2), Math.ceil(s2));
+  }
+  bgx.restore();
+  bgx.globalAlpha = 1;
+}
+
+
+// ---------- kiss button ----------
+function placeKiss(f) {
+  const k = $("kiss"), nums = [...document.querySelectorAll(".num")].map(n => n.getBoundingClientRect());
+  const u = { right: Math.max(...nums.map(r => r.right)), top: Math.min(...nums.map(r => r.top)), bottom: Math.max(...nums.map(r => r.bottom)) };
+  u.height = u.bottom - u.top;
+  const space = (frame.x + frame.w - 14) - u.right;      // room between timer and frame edge
+  const size = Math.max(22, Math.min(f * 1.15, space - 10));
+  k.style.fontSize = size + "px";
+  k.style.left = Math.min(u.right + space / 2, u.right + size * 1.1) + "px";
+  k.style.top = (u.top + u.height / 2) + "px";
+}
+$("kiss").addEventListener("click", e => {
+  const k = $("kiss");
+  k.classList.remove("pop"); void k.offsetWidth; k.classList.add("pop");
+  const r = k.getBoundingClientRect();
+  const m = document.createElement("div");
+  m.className = "mwah";
+  m.textContent = Math.random() < .5 ? "mwah" : "mwah ♥";
+  m.style.fontSize = Math.max(11, r.height * 0.42) + "px";
+  m.style.left = (r.left + r.width / 2) + "px";
+  m.style.top = (r.top - 4) + "px";
+  m.style.setProperty("--dx", (Math.random() * 40 - 20) + "px");
+  $("stage").appendChild(m);
+  setTimeout(() => m.remove(), 1500);
+  // a couple of pixel hearts too
+  for (let i = 0; i < 3; i++) hearts.push({ x: r.left + r.width / 2 - 20 + Math.random() * 40, y: r.top - 10 * Math.random(), life: 0.4 * i / 3 });
+});
+
+// ---------- countdown ----------
+const target = new Date(CONFIG.target).getTime();
+$("title").textContent = CONFIG.title;
+$("done").textContent = CONFIG.doneMessage;
+const pad = n => String(n).padStart(2, "0");
+function updateCountdown() {
+  const ms = target - Date.now();
+  if (ms <= 0) { finished = true; $("countdown").classList.add("finished"); return; }
+  const s = Math.floor(ms / 1000);
+  $("d").textContent = pad(Math.floor(s / 86400));
+  $("h").textContent = pad(Math.floor(s / 3600) % 24);
+  $("m").textContent = pad(Math.floor(s / 60) % 60);
+  $("s").textContent = pad(s % 60);
+}
+updateCountdown(); setInterval(updateCountdown, 1000);
+
+// ---------- curtain ----------
+function openCurtain() {
+  if (state !== "waiting") return;
+  $("curtain").classList.add("open");
+  state = "pulling"; t0 = performance.now();
+}
+// Desktop widget mode: add ?widget to the link → curtain opens by itself,
+// and the page reloads every 3 hours so changes you push show up.
+const WIDGET = /[?&]widget/.test(location.search);
+if (WIDGET) setTimeout(() => location.reload(), 3 * 3600 * 1000);
+if (CONFIG.tapToOpen && !WIDGET) $("curtain").addEventListener("click", openCurtain);
+else { $("tap").style.display = "none"; setTimeout(openCurtain, 900); }
+
+addEventListener("resize", resize);
+resize();
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
