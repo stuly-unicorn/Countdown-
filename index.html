@@ -224,6 +224,10 @@ const DOG_PULL = [0, 1].map(i => build(DOG_TOP, DOG_PULL_BODY, DOG_PULL_LEGS[i])
 const CAT = [0, 1].map(i => build(CAT_TOP, CAT_BODY, CAT_LEGS[i]));
 const CAT_PULL = [0, 1].map(i => build(CAT_TOP, CAT_PULL_BODY, CAT_PULL_LEGS[i]));
 const SPRITE_W = 18;
+// Standing-up dance poses (arms raised / one arm waving), generated pixel art
+const DOG_UP = [[".......oooo.......", "......owbwbo......", ".....oddbbbbo.....", "...oooddbbkboo.oo.", "..owwoddbbbbbkowwo", "..obboddbbbbbbobbo", "..obbodbbbbbooobbo", "..obbbbbbbbbbbbbbo", "...oobobbwwbooooo.", "...owoowbwwbo.....", "...oboobbwwbo.....", "....obbbwwwbo.....", ".....oobbbbbo.....", "......obbobbo.....", "......obbobbo.....", ".....obbbobbbo....", "......ooo.ooo....."], [".......oooo.......", "......owbwbo......", ".....oddbbbbo.....", "...oooddbbkboo....", "..owwoddbbbbbko...", "..obboddbbbbbbo...", "..obbodbbbbboo.o..", "..obbbbbbbbbooowo.", "...oobobbwwbbbbwo.", "...owoowbwwbbbbo..", "...oboobbwwbooo...", "....obbbwwwbo.....", ".....oobbbbbo.....", "......obbobbo.....", "......obbobbo.....", ".....obbbobbbo....", "......ooo.ooo....."]];
+const CAT_UP = [["......o.....o.....", ".....odo...odo....", ".....oddoooddo....", "......obbbbbo.....", ".....obbbbbbbo....", "...ooobbedebbooo..", "..oddobdddddboddo.", "..obbobbdkdbbobbo.", "..obboobdddboobbo.", "..obbbbbbbbbbbbbo.", "...oooobwwwboooo..", "....odobwwwbo.....", "...odoobwwwbo.....", "...odoobbbbbo.....", "....oddbbbbbo.....", ".....oobbobbo.....", "......obbobbo.....", ".....odddodddo....", "......ooo.ooo....."], ["......o.....o.....", ".....odo...odo....", ".....oddoooddo....", "......obbbbbo.....", ".....obbbbbbbo....", "...ooobbedebbo....", "..oddobdddddbo....", "..obbobbdkdbbo....", "..obboobdddbo..o..", "..obbbbbbbbbooodo.", "...oooobwwwbbbbdo.", "....odobwwwbbbbo..", "...odoobwwwbooo...", "...odoobbbbbo.....", "....oddbbbbbo.....", ".....oobbobbo.....", "......obbobbo.....", ".....odddodddo....", "......ooo.ooo....."]];
+
 const HEART = [".pp.pp.", "ppppppp", "ppppppp", ".ppppp.", "..ppp..", "...p..."];
 const HEART_PAL = { p: "#E8A6B0" };
 
@@ -383,11 +387,13 @@ function hatSprite(petRows, centerCol, brimRow) {
 }
 const DOG_HAT = hatSprite(DOG[0], 11.5, 0);
 const CAT_HAT = hatSprite(CAT[0], 12.5, 0);
+DOG_UP.forEach(r => r.hat = hatSprite(r, 8.5, 0));
+CAT_UP.forEach(r => r.hat = hatSprite(r, 9, 1));
 function drawPet(kind, rows, x, y, a, scale, flip = false) {
   const isDog = kind === "dog";
   drawSprite(rows, isDog ? CONFIG.dog : CONFIG.cat, x, y, a, scale, flip);
   if (M.days === 60 || M.arrival) {
-    const hat = isDog ? DOG_HAT : CAT_HAT;
+    const hat = rows.hat || (isDog ? DOG_HAT : CAT_HAT);
     drawSprite(hat, HAT_PAL, x, y, a, scale / 2, flip, SPRITE_W * 2);
   }
 }
@@ -516,6 +522,44 @@ function drawExtras(now, dt) {
   ctx.globalAlpha = 1;
 }
 
+// ---------- celebration days: the pets dance and jump around ----------
+// They hop along the frame, then stop every few seconds to dance: turning side to
+// side, standing up with their arms in the air, and jumping every 4th beat.
+// On arrival day they dance together in the middle of the top edge.
+function danceParty(now, dt) {
+  const tempo = M.final ? BEAT : 480;                  // rave days follow the 150 BPM beat
+  const beat = now / tempo, beatN = Math.floor(beat), beatT = beat - beatN;
+  const cyc = now % 7000, dancing = M.arrival || cyc > 4200;
+  if (!dancing) dist += SPEED * (M.final ? 1.25 : 1) * dt;
+  let spots;
+  if (M.arrival) {
+    const topMid = (frame.w - 2 * frame.r) / 2;
+    spots = [pointAt(topMid - 11 * S), pointAt(topMid + 11 * S)];
+  } else spots = [pointAt(dist), pointAt(dist + 64 + 10 * S)];
+  ["dog", "cat"].forEach((kind, i) => {
+    const p = spots[i], off = i * 0.5;
+    let lift, flip, rows;
+    if (!dancing) {                                       // bouncy hops while travelling
+      lift = Math.abs(Math.sin((beat + off) * Math.PI)) * 6 * S;
+      flip = false; rows = (kind === "dog" ? DOG : CAT)[(beatN + i) % 2];
+    } else {                                              // stand up and dance with arms in the air
+      const jump = (beatN + i) % 4 === 3;
+      lift = jump ? Math.sin(beatT * Math.PI) * 9 * S : Math.abs(Math.sin(beatT * Math.PI)) * 3 * S;
+      const pose = jump ? 0 : (beatN + i) % 2;            // 0 = both arms up, 1 = one arm waving
+      rows = (kind === "dog" ? DOG_UP : CAT_UP)[pose];
+      const base = M.arrival ? i === 1 : false;           // on arrival day they face each other
+      flip = (Math.floor((beatN + i) / 2) % 2 === 0) ? base : !base;
+    }
+    const n = { x: Math.sin(p.a), y: -Math.cos(p.a) };
+    drawPet(kind, rows, p.x + n.x * (3 + lift), p.y + n.y * (3 + lift), p.a, S, flip);
+  });
+  if (now > nextHeart) {
+    const mid = M.arrival ? { x: W / 2, y: frame.y - 22 * S } : pointAt(dist + 40);
+    hearts.push({ x: mid.x, y: mid.y - 20 * S, life: 0 });
+    nextHeart = now + (M.arrival ? 700 : 1400);
+  }
+}
+
 // ---------- animation ----------
 // waiting → pulling (pets drag the curtains open) → hopping (onto the frame) → running
 const PULL = 1.9, PAUSE = 0.35, HOP = 0.9, SPEED = 85;
@@ -583,14 +627,8 @@ function tick(now) {
     drawExtras(now, dt);
     drawFrame(1);
     const lift = 3, nx = a => Math.sin(a) * lift, ny = a => -Math.cos(a) * lift;
-    if (M.arrival) {
-      // arrival day: the pets meet in the middle of the top edge, nose to nose
-      const topMid = (frame.w - 2 * frame.r) / 2;
-      const bounce = Math.abs(Math.sin(now / 260)) * 4;
-      const dog = pointAt(topMid - 9 * S), cat = pointAt(topMid + 9 * S);
-      drawPet("dog", DOG[0], dog.x, dog.y - 3 - bounce, 0, S);
-      drawPet("cat", CAT[0], cat.x, cat.y - 3 - bounce, 0, S, true);
-      if (now > nextHeart) { hearts.push({ x: W / 2, y: dog.y - 18 * S, life: 0 }); nextHeart = now + 700; }
+    if ((M.ten || M.final || M.arrival) && !sleeping) {
+      danceParty(now, dt);
     } else if (sleeping) {
       // day 30: curled up asleep until she taps
       const dog = pointAt(dist), cat = pointAt(dist + 70);
