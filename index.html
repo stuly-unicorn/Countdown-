@@ -19,6 +19,43 @@
   #stage{position:fixed;inset:0}
   #bg{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;z-index:0;pointer-events:none}
   #countdown{z-index:1}
+  /* ---- milestone backgrounds ---- */
+  /* days 10 to 1: EDM / hardstyle rave */
+  body.mrave #stage{background:radial-gradient(ellipse at 50% 115%,#3A1361 0%,#170A30 55%,#06030D 100%)}
+  body.mrave .lbl{color:#E6D9F7}
+  body.mrave .num{box-shadow:0 0 22px rgba(255,70,200,.55),0 0 0 2px #FF5FD2,0 5px 0 #7A2A8C}
+  body.mrave.milestone #title{background:rgba(20,10,40,.75);color:#F4E8FF;box-shadow:0 0 12px rgba(80,220,255,.5)}
+  /* arrival day: pet-colour split */
+  body.msplit #stage{background:linear-gradient(90deg,var(--dog1) 0%,var(--dog2) 47%,var(--cat1) 53%,var(--cat2) 100%)}
+  /* days 60, 50, 40, 30, 20: party! confetti dots + streamers */
+  body.mparty #stage{background-color:#FCEBEF;
+    background-image:
+      radial-gradient(#F2C94C 3px,transparent 4px),radial-gradient(#9EC5E8 3px,transparent 4px),
+      radial-gradient(#A8D5BA 3px,transparent 4px),radial-gradient(#C9B6E4 3px,transparent 4px),
+      radial-gradient(#E8A6B0 3px,transparent 4px),
+      repeating-linear-gradient(135deg,rgba(255,255,255,.55) 0 18px,transparent 18px 52px);
+    background-size:68px 68px,86px 86px,78px 78px,94px 94px,58px 58px,100% 100%;
+    background-position:0 0,34px 40px,18px 62px,60px 14px,44px 28px,0 0}
+  body.milestone #title{color:var(--ink);background:rgba(255,255,255,.7);display:inline-block;padding:6px 10px;border-radius:6px}
+  #marquee{position:absolute;left:50%;top:calc(42% - 70px);transform:translateX(-50%);z-index:3;display:none;
+           font-size:clamp(11px,3vw,16px);color:#fff;background:var(--ink);border:3px solid #F6D6DA;border-radius:6px;
+           padding:10px 14px;white-space:nowrap;box-shadow:0 0 0 3px var(--ink)}
+  #marquee.on{display:block;animation:blink 1s steps(2) infinite}
+  @keyframes blink{50%{border-color:#E8A6B0}}
+  /* special days: the day sign replaces the "tap to open" button */
+  #curtain.special #tap{display:none}
+  #curtain.special #marquee{top:42%;transform:translate(-50%,-50%);font-size:clamp(12px,3.4vw,18px);padding:14px 18px}
+  #letter{position:absolute;z-index:2;border:0;background:none;cursor:pointer;line-height:1;padding:4px;display:none;
+          transform:translate(-50%,-50%);-webkit-tap-highlight-color:transparent;animation:kissfloat 2.6s ease-in-out infinite .8s}
+  #letter.on{display:block}
+  #note{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;background:rgba(107,90,78,.35)}
+  #note.on{display:flex}
+  #note .card{background:#FFFDF9;border:4px solid var(--beige);box-shadow:0 6px 0 var(--beige),0 0 0 4px #F6D6DA inset;
+              border-radius:10px;padding:26px 22px 20px;width:min(86vw,420px);text-align:center;animation:card .35s ease-out}
+  #note .head{font-size:10px;color:var(--pink-deep);margin-bottom:16px}
+  #note .body{font-family:ui-rounded,-apple-system,system-ui,sans-serif;font-size:17px;line-height:1.55;color:var(--ink);white-space:pre-wrap}
+  #note .close{margin-top:18px;font-size:8px;color:var(--taupe)}
+  @keyframes card{from{transform:scale(.7) rotate(-4deg);opacity:0}}
   #kiss{position:absolute;z-index:2;border:0;background:none;cursor:pointer;line-height:1;padding:4px;opacity:.75;
         transform:translate(-50%,-50%);-webkit-tap-highlight-color:transparent;
         filter:drop-shadow(0 3px 0 rgba(217,142,156,.35));animation:kissfloat 2.6s ease-in-out infinite}
@@ -113,14 +150,17 @@
     <div id="done"></div>
   </div>
   <button id="kiss" aria-label="send a kiss">😘</button>
+  <button id="letter" aria-label="open your note">💌</button>
 </div>
 
 <canvas id="c"></canvas>
+<div id="note"><div class="card"><div class="head"></div><div class="body"></div><div class="close">tap to close</div></div></div>
 <div id="curtain">
   <div class="drape left"></div>
   <div class="drape right"></div>
   <div id="valance"></div>
   <div id="fluff"></div>
+  <div id="marquee"></div>
   <div id="tap">tap to open ♥</div>
 </div>
 
@@ -136,6 +176,14 @@ const CONFIG = {
   tapToOpen: true,          // false = pets open the curtain by themselves
   // Labradoodle colours
   dog: { o: "#7A5C47", b: "#EBCFA6", w: "#F8EBD3", d: "#D6A877", k: "#3A2A22" },
+  // Milestone-day background: left half (dog) and right half (cat)
+  milestoneBg: { dog: ["#B08A68", "#EBCB7E"], cat: ["#F7F4EF", "#B5B2AE"] },
+  // Notes that unlock on each day (days left → note). Leave "" for no note.
+  notes: {
+    60: "", 50: "", 40: "", 30: "", 20: "",
+    10: "", 9: "", 8: "", 7: "", 6: "", 5: "", 4: "", 3: "", 2: "", 1: "",
+    0: "",
+  },
   // Siamese colours (cream body, seal-brown points, blue eyes)
   cat: { o: "#5A4034", b: "#F1E4D0", w: "#FBF5EC", d: "#5A3F33", e: "#7FB3E0", k: "#2B2220" },
 };
@@ -218,6 +266,8 @@ function resize() {
   $("countdown").style.setProperty("--f", f + "px");
   $("countdown").style.width = inner + "px";
   placeKiss(f);
+  placeLetter();
+  stars = [];
   setupGlobe();
 }
 
@@ -269,6 +319,122 @@ function drawFrame(alpha) {
 const ease = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 const lerp = (a, b, t) => a + (b - a) * t;
 
+// ---------- milestones ----------
+// Preview any day with ?preview=30 (or #preview-30) on the link.
+const PREVIEW = (() => {
+  const m = location.search.match(/preview=(\d+)/) || location.hash.match(/preview-(\d+)/);
+  return m ? +m[1] : null;
+})();
+const M = { days: null, ten: false, final: false, arrival: false };
+function computeMilestone(realDays, done) {
+  const d = PREVIEW ?? (done ? 0 : realDays);
+  M.days = d;
+  M.arrival = d === 0;
+  M.ten = d > 0 && d % 10 === 0;
+  M.final = d >= 1 && d <= 10;
+  // day 10 has its own design (coming soon), so it keeps the normal background for now
+  const bgClass = M.arrival ? "msplit" : M.final ? "mrave" : (M.ten && d >= 20) ? "mparty" : "";
+  document.body.className = document.body.className.replace(/\bm(party|split|rave)\b/g, "").trim();
+  if (bgClass) document.body.classList.add(bgClass);
+  document.body.classList.toggle("milestone", !!bgClass);
+  const mq = $("marquee");
+  if (bgClass && !M.arrival) { mq.textContent = `${d} DAY${d === 1 ? "" : "S"} TO GO ♥`; mq.classList.add("on"); }
+  else if (M.arrival) { mq.textContent = "TODAY'S THE DAY ♥"; mq.classList.add("on"); }
+  else mq.classList.remove("on");
+  $("curtain").classList.toggle("special", !!bgClass);
+  const note = CONFIG.notes[d] || (PREVIEW !== null ? `(your note for day ${d} goes here)` : "");
+  $("letter").classList.toggle("on", !!note && (M.ten || M.final || M.arrival));
+  $("note").querySelector(".head").textContent = d === 0 ? "♥ today ♥" : `♥ ${d} day${d === 1 ? "" : "s"} to go ♥`;
+  $("note").querySelector(".body").textContent = note;
+}
+const BG = CONFIG.milestoneBg;
+document.body.style.setProperty("--dog1", BG.dog[0]); document.body.style.setProperty("--dog2", BG.dog[1]);
+document.body.style.setProperty("--cat1", BG.cat[0]); document.body.style.setProperty("--cat2", BG.cat[1]);
+
+// Little extras drawn on the pets / screen
+const HAT = ["..y..", "..p..", ".ppp.", ".pwp.", "ppppp"];
+const HAT_PAL = { p: "#E8A6B0", w: "#FFFFFF", y: "#F2C94C" };
+function hatSprite(petRows, col, bottomRow) {          // hat placed in pet-sprite coordinates
+  const rows = [];
+  for (let r = 0; r < HAT.length; r++) rows.push(".".repeat(col - 2) + HAT[r]);
+  const pad = petRows.length - bottomRow - 1;
+  for (let i = 0; i < pad; i++) rows.push("");
+  return rows;
+}
+const DOG_HAT = hatSprite(DOG[0], 12, -1);
+const CAT_HAT = hatSprite(CAT[0], 13, 0);
+function drawPet(kind, rows, x, y, a, scale, flip = false) {
+  const isDog = kind === "dog";
+  drawSprite(rows, isDog ? CONFIG.dog : CONFIG.cat, x, y, a, scale, flip);
+  if (M.days === 60 || M.arrival) {
+    const hat = isDog ? DOG_HAT : CAT_HAT;
+    drawSprite(hat, HAT_PAL, x, y, a, scale, flip);
+  }
+}
+
+// Particles: confetti, fireworks, snow, stars
+let parts = [];
+const PASTELS = ["#E8A6B0", "#F2C94C", "#A8D5BA", "#9EC5E8", "#C9B6E4", "#FFFFFF"];
+function confetti(n = 70) {
+  for (let i = 0; i < n; i++) parts.push({ x: W / 2 + (Math.random() - .5) * 80, y: H * .35, vx: (Math.random() - .5) * 420,
+    vy: -Math.random() * 380 - 120, g: 420, life: 0, max: 2.6, c: PASTELS[i % PASTELS.length], s: 3 + Math.random() * 3 });
+}
+function firework() {
+  const x = W * (.15 + Math.random() * .7), y = H * (.12 + Math.random() * .3), c = PASTELS[Math.floor(Math.random() * 5)];
+  for (let i = 0; i < 26; i++) { const a = i / 26 * Math.PI * 2, sp = 90 + Math.random() * 60;
+    parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, g: 60, life: 0, max: 1.3, c, s: 3 }); }
+}
+let nextFx = 0, sleeping = false, stars = [];
+function makeStars() {
+  stars = Array.from({ length: 40 }, () => ({ x: Math.random() * W, y: Math.random() * H * .9, p: Math.random() * 6 }));
+}
+function drawExtras(now, dt) {
+  // 30: twinkling stars + moon
+  if (M.days === 30) {
+    if (!stars.length) makeStars();
+    for (const st of stars) {
+      ctx.globalAlpha = .35 + .35 * Math.sin(now / 600 + st.p);
+      ctx.fillStyle = "#FFFFFF"; const z = 3;
+      ctx.fillRect(st.x - z, st.y, z * 3, z); ctx.fillRect(st.x, st.y - z, z, z * 3);
+    }
+    ctx.globalAlpha = .8; ctx.fillStyle = "#FFF6D8";
+    const mx = W * .86, my = H * .1, mr = Math.min(W, H) * .045;
+    ctx.beginPath(); ctx.arc(mx, my, mr, 0, 7); ctx.fill();
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.beginPath(); ctx.arc(mx + mr * .45, my - mr * .25, mr * .85, 0, 7); ctx.fill();
+    ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+  }
+  // 50: balloons drifting up
+  if (M.days === 50) {
+    for (let i = 0; i < 6; i++) {
+      const sp = 40 + i * 7, x = W * (.08 + i * .17) + Math.sin(now / 900 + i) * 10;
+      const y = H + 60 - ((now / 1000 * sp + i * 170) % (H + 160));
+      const c = PASTELS[i % 5], r = Math.max(14, S * 6);
+      ctx.globalAlpha = .75; ctx.fillStyle = c;
+      ctx.beginPath(); ctx.ellipse(x, y, r * .8, r, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = "#fff"; ctx.fillRect(x - r * .35, y - r * .5, r * .2, r * .3);
+      ctx.strokeStyle = "#B8A99A"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(x, y + r); ctx.quadraticCurveTo(x + 8, y + r * 2, x, y + r * 3); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+  }
+  // final 10 days: gentle heart rain
+  if (M.final && now > nextFx) {
+    hearts.push({ x: Math.random() * W, y: -10, life: 0, vy: 38, max: H / 38 + 1, a: .45 });
+    nextFx = now + 650;
+  }
+  // arrival: fireworks
+  if (M.arrival && now > nextFx) { firework(); nextFx = now + 900; }
+  // particles
+  parts = parts.filter(p => p.life < p.max);
+  for (const p of parts) {
+    p.life += dt; p.vy += p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt;
+    ctx.globalAlpha = Math.max(0, 1 - p.life / p.max); ctx.fillStyle = p.c;
+    ctx.fillRect(p.x, p.y, p.s, p.s);
+  }
+  ctx.globalAlpha = 1;
+}
+
 // ---------- animation ----------
 // waiting → pulling (pets drag the curtains open) → hopping (onto the frame) → running
 const PULL = 1.9, PAUSE = 0.35, HOP = 0.9, SPEED = 85;
@@ -299,8 +465,8 @@ function tick(now) {
     const s = stagePos(0);
     setDrapes(s.pawL, s.pawR);
     const bob = Math.floor(now / 500) % 2;      // little idle wiggle
-    drawSprite(DOG_PULL[bob], CONFIG.dog, s.dog.x, s.dog.y, 0, BIG);
-    drawSprite(CAT_PULL[1 - bob], CONFIG.cat, s.cat.x, s.cat.y, 0, BIG, true);
+    drawPet("dog", DOG_PULL[bob], s.dog.x, s.dog.y, 0, BIG);
+    drawPet("cat", CAT_PULL[1 - bob], s.cat.x, s.cat.y, 0, BIG, true);
   }
 
   else if (state === "pulling") {
@@ -308,12 +474,13 @@ function tick(now) {
     const s = stagePos(p);
     setDrapes(s.pawL, s.pawR);
     const hop = t < PULL ? Math.abs(Math.sin(now / 130)) * BIG : 0;
-    drawSprite(DOG_PULL[step], CONFIG.dog, s.dog.x, s.dog.y - hop, 0, BIG);
-    drawSprite(CAT_PULL[1 - step], CONFIG.cat, s.cat.x, s.cat.y - hop, 0, BIG, true);
+    drawPet("dog", DOG_PULL[step], s.dog.x, s.dog.y - hop, 0, BIG);
+    drawPet("cat", CAT_PULL[1 - step], s.cat.x, s.cat.y - hop, 0, BIG, true);
     if (t >= PULL && !$("curtain").classList.contains("lift")) {
       $("curtain").classList.add("lift");
       L.classList.add("away"); R.classList.add("away");
       L.style.transform = "translateX(-101%)"; R.style.transform = "translateX(101%)";
+      if ((M.ten && M.days >= 20) || M.arrival) confetti();
     }
     if (t >= PULL + PAUSE) { state = "hopping"; t0 = now; }
   }
@@ -326,30 +493,55 @@ function tick(now) {
     const dEnd = pointAt(dist), cEnd = pointAt(dist + gap);
     const arc = Math.sin(Math.PI * q) * 70;
     drawFrame(q);
-    drawSprite(DOG[step], CONFIG.dog, lerp(s.dog.x, dEnd.x, q), lerp(s.dog.y, dEnd.y - 3, q) - arc, 0, lerp(BIG, S, q));
-    drawSprite(CAT[step], CONFIG.cat, lerp(s.cat.x, cEnd.x, q), lerp(s.cat.y, cEnd.y - 3, q) - arc, 0, lerp(BIG, S, q), q < 0.9);
-    if (t >= HOP) { state = "running"; $("curtain").classList.add("gone"); }
+    drawPet("dog", DOG[step], lerp(s.dog.x, dEnd.x, q), lerp(s.dog.y, dEnd.y - 3, q) - arc, 0, lerp(BIG, S, q));
+    drawPet("cat", CAT[step], lerp(s.cat.x, cEnd.x, q), lerp(s.cat.y, cEnd.y - 3, q) - arc, 0, lerp(BIG, S, q), q < 0.9);
+    if (t >= HOP) { state = "running"; $("curtain").classList.add("gone"); sleeping = M.days === 30; }
   }
 
   else { // running
+    drawExtras(now, dt);
     drawFrame(1);
-    dist += SPEED * (finished ? 1.6 : 1) * dt;
-    const gap = gapAt(now);
-    const dog = pointAt(dist), cat = pointAt(dist + gap);
     const lift = 3, nx = a => Math.sin(a) * lift, ny = a => -Math.cos(a) * lift;
-    drawSprite(DOG[step], CONFIG.dog, dog.x + nx(dog.a), dog.y + ny(dog.a), dog.a, S);
-    drawSprite(CAT[(step + 1) % 2], CONFIG.cat, cat.x + nx(cat.a), cat.y + ny(cat.a), cat.a, S);
-    if (now > nextHeart) {
-      const mid = pointAt(dist + gap / 2);
-      hearts.push({ x: mid.x + Math.sin(mid.a) * 44, y: mid.y - Math.cos(mid.a) * 44, life: 0 });
-      nextHeart = now + (finished ? 500 : 2600);
+    if (M.arrival) {
+      // arrival day: the pets meet in the middle of the top edge, nose to nose
+      const topMid = (frame.w - 2 * frame.r) / 2;
+      const bounce = Math.abs(Math.sin(now / 260)) * 4;
+      const dog = pointAt(topMid - 9 * S), cat = pointAt(topMid + 9 * S);
+      drawPet("dog", DOG[0], dog.x, dog.y - 3 - bounce, 0, S);
+      drawPet("cat", CAT[0], cat.x, cat.y - 3 - bounce, 0, S, true);
+      if (now > nextHeart) { hearts.push({ x: W / 2, y: dog.y - 18 * S, life: 0 }); nextHeart = now + 700; }
+    } else if (sleeping) {
+      // day 30: curled up asleep until she taps
+      const dog = pointAt(dist), cat = pointAt(dist + 70);
+      drawPet("dog", DOG[0], dog.x, dog.y - 3, 0, S);
+      drawPet("cat", CAT[0], cat.x, cat.y - 3, 0, S, true);
+      ctx.fillStyle = "#6B5A4E"; ctx.globalAlpha = .7;
+      ctx.font = `${Math.round(S * 4)}px "Press Start 2P", monospace`;
+      const zz = Math.floor(now / 500) % 3;
+      ctx.fillText("z".repeat(zz + 1), (dog.x + cat.x) / 2 - 8, dog.y - 16 * S - zz * 4);
+      ctx.globalAlpha = 1;
+    } else {
+      const fast = M.final ? 1.4 : 1;
+      dist += SPEED * fast * dt;
+      const gap = gapAt(now);
+      const swap = M.days === 50;                       // day 50: the cat chases the dog
+      const dog = pointAt(swap ? dist + gap : dist), cat = pointAt(swap ? dist : dist + gap);
+      const sp = M.final ? 100 : 130, st = Math.floor(now / sp) % 2;
+      const hop = M.final ? 1 + kick() * 3 * S : 1;   // days 10–1: bounce to the beat
+      drawPet("dog", DOG[st], dog.x + nx(dog.a) * hop, dog.y + ny(dog.a) * hop, dog.a, S);
+      drawPet("cat", CAT[(st + 1) % 2], cat.x + nx(cat.a) * hop, cat.y + ny(cat.a) * hop, cat.a, S);
+      if (now > nextHeart) {
+        const mid = pointAt(dist + gap / 2);
+        hearts.push({ x: mid.x + Math.sin(mid.a) * 44, y: mid.y - Math.cos(mid.a) * 44, life: 0 });
+        nextHeart = now + 2600;
+      }
     }
   }
 
-  hearts = hearts.filter(h => h.life < 1.6);
+  hearts = hearts.filter(h => h.life < (h.max || 1.6));
   for (const h of hearts) {
-    h.life += dt; h.y -= 18 * dt;
-    ctx.globalAlpha = Math.max(0, 1 - h.life / 1.6);
+    h.life += dt; h.y += (h.vy ?? -18) * dt;
+    ctx.globalAlpha = h.vy ? (h.a ?? 1) : Math.max(0, 1 - h.life / 1.6);
     drawSprite(HEART, HEART_PAL, h.x + SPRITE_W / 2 * S * 0.8 - 3.5 * S * 0.8, h.y, 0, S * 0.8);
     ctx.globalAlpha = 1;
   }
@@ -513,7 +705,8 @@ function setupGlobe() {
 
 function drawGlobe(now) {
   bgx.clearRect(0, 0, W, H);
-  bgx.globalAlpha = 0.6;
+  if (M.final) drawRaveBack(now);
+  bgx.globalAlpha = M.final ? 0.16 : 0.6;
   bgx.drawImage(globeImg, G.cx - G.r, G.cy - G.r, G.r * 2, G.r * 2);
   // route
   bgx.globalAlpha = 0.8;
@@ -530,8 +723,30 @@ function drawGlobe(now) {
     bgx.textAlign = "center"; bgx.fillText(place.name, pt.x, pt.y + ps * 6);
   }
   // little plane flying the route (14 s per trip, short rest at each end)
-  const cyc = (now / 1000) % 16, t = Math.min(Math.max((cyc - 1) / 14, 0), 1);
+  const cyc = (now / 1000) % 16;
+  let t = Math.min(Math.max((cyc - 1) / 14, 0), 1);
+  if (M.arrival) t = 1;                                   // landed!
   const k = ease(t) * (route.length - 1), i = Math.min(Math.floor(k), route.length - 2);
+  if (M.days === 40) {                                    // little heart trail behind the plane
+    for (let j = 6; j < k; j += 8) {
+      const hp = route[j], hs = Math.max(1.5, G.r / 160);
+      for (let r = 0; r < PIN.length; r++) for (let c = 0; c < 7; c++) if (PIN[r][c] === "p") {
+        bgx.fillStyle = "#E8A6B0"; bgx.fillRect(hp.x + (c - 3.5) * hs, hp.y + (r - 3) * hs, hs, hs);
+      }
+    }
+  }
+  if (M.days === 20) {                                    // snow over Vancouver, sun over Armidale
+    const v = route[0], a = route[route.length - 1], u = Math.max(2, G.r / 110);
+    bgx.fillStyle = "#AFC3CF";
+    for (let n = 0; n < 18; n++) {
+      const fx = v.x - 50 + ((n * 37) % 100), fy = v.y - 60 + ((now / 30 + n * 23) % 90);
+      bgx.fillRect(fx, fy, u * 1.5, u * 1.5);
+    }
+    const sx = a.x - 40, sy = a.y - 40, sr = u * 4;
+    bgx.fillStyle = "#F2C94C"; bgx.beginPath(); bgx.arc(sx, sy, sr, 0, 7); bgx.fill();
+    for (let n = 0; n < 8; n++) { const an = n * Math.PI / 4 + now / 3000;
+      bgx.fillRect(sx + Math.cos(an) * sr * 1.6 - u / 2, sy + Math.sin(an) * sr * 1.6 - u / 2, u, u); }
+  }
   const p = route[i], q = route[i + 1], f = k - i;
   const x = lerp(p.x, q.x, f), y = lerp(p.y, q.y, f), ang = Math.atan2(q.y - p.y, q.x - p.x);
   bgx.save(); bgx.translate(x, y); bgx.rotate(ang);
@@ -543,6 +758,7 @@ function drawGlobe(now) {
   }
   bgx.restore();
   bgx.globalAlpha = 1;
+  if (M.final) drawRaveFront(now);
 }
 
 
@@ -574,6 +790,158 @@ $("kiss").addEventListener("click", e => {
   for (let i = 0; i < 3; i++) hearts.push({ x: r.left + r.width / 2 - 20 + Math.random() * 40, y: r.top - 10 * Math.random(), life: 0.4 * i / 3 });
 });
 
+// ---------- days 10 to 1: EDM / hardstyle rave ----------
+const BPM = 150, BEAT = 60000 / BPM;
+const NEON = ["#FF3FD2", "#3FE8FF", "#7CFF4F", "#B36BFF", "#FFE14F"];
+let boost = 0, flash = 0, rings = [], laserHue = 0, audio = null;
+const kick = () => Math.exp(-((performance.now() % BEAT) / BEAT) * 7);
+function speakers() {
+  const w = Math.max(54, Math.min(W * 0.11, 120)), h = w * 2.1, m = 10;
+  return [{ x: m, y: H - h - m, w, h, side: -1 }, { x: W - w - m, y: H - h - m, w, h, side: 1 }];
+}
+function drawRaveBack(now) {
+  const k = kick() + boost * 0.8;
+  // pulsing floor glow
+  const g = bgx.createRadialGradient(W / 2, H * 1.05, 10, W / 2, H * 1.05, H * (0.55 + k * 0.12));
+  g.addColorStop(0, `rgba(255,63,210,${0.35 + k * 0.25})`); g.addColorStop(1, "rgba(255,63,210,0)");
+  bgx.fillStyle = g; bgx.fillRect(0, 0, W, H);
+  // lasers
+  const tx = W / 2 + Math.sin(now / 1300) * W * 0.4;
+  const ty = H * 0.45 + Math.cos(now / 1700) * H * 0.3;
+  const emitters = [[0, 0], [W, 0], [W / 2, -10], [0, H * 0.55], [W, H * 0.55]];
+  const diag = Math.hypot(W, H) * 1.2;
+  bgx.save(); bgx.globalCompositeOperation = "lighter";
+  emitters.forEach(([ex, ey], ei) => {
+    const base = Math.atan2(ty - ey, tx - ex);
+    const col = NEON[(ei + laserHue) % NEON.length];
+    const fan = 3, spread = 0.07 + 0.05 * Math.sin(now / 500 + ei);
+    for (let f = 0; f < fan; f++) {
+      const a = base + (f - 1) * spread;
+      const x2 = ex + Math.cos(a) * diag, y2 = ey + Math.sin(a) * diag;
+      bgx.strokeStyle = col;
+      bgx.globalAlpha = 0.10 + k * 0.08; bgx.lineWidth = 9;
+      bgx.beginPath(); bgx.moveTo(ex, ey); bgx.lineTo(x2, y2); bgx.stroke();
+      bgx.globalAlpha = 0.55 + k * 0.3; bgx.lineWidth = 1.6;
+      bgx.beginPath(); bgx.moveTo(ex, ey); bgx.lineTo(x2, y2); bgx.stroke();
+    }
+  });
+  bgx.restore(); bgx.globalAlpha = 1;
+}
+function drawRaveFront(now) {
+  const k = kick() + boost;
+  // speaker stacks: a top cabinet (horn + woofer) sitting on a subwoofer
+  for (const sp of speakers()) drawSpeakerStack(sp, k);
+  // bass shockwave rings
+  rings = rings.filter(r => r.t < 1);
+  for (const r of rings) {
+    r.t += 0.025;
+    bgx.strokeStyle = r.c; bgx.globalAlpha = 1 - r.t; bgx.lineWidth = 4 * (1 - r.t) + 1;
+    bgx.beginPath(); bgx.arc(r.x, r.y, 20 + r.t * Math.max(W, H) * 0.5, 0, 7); bgx.stroke();
+  }
+  bgx.globalAlpha = 1;
+  // strobe flash
+  if (flash > 0) { bgx.fillStyle = `rgba(255,255,255,${flash * 0.35})`; bgx.fillRect(0, 0, W, H); flash -= 0.06; }
+  // screen shake from bass boost
+  if (boost > 0.02) {
+    const sx = (Math.random() - .5) * boost * 10, sy = (Math.random() - .5) * boost * 10;
+    $("stage").style.transform = `translate(${sx}px,${sy}px)`; boost *= 0.92;
+  } else if (boost) { boost = 0; $("stage").style.transform = ""; }
+}
+function cabinet(x, y, w, h) {
+  const g = bgx.createLinearGradient(x, y, x + w, y + h);
+  g.addColorStop(0, "#232328"); g.addColorStop(1, "#0D0D10");
+  bgx.fillStyle = g; bgx.fillRect(x, y, w, h);
+  bgx.strokeStyle = "#34343B"; bgx.lineWidth = 2; bgx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+  bgx.strokeStyle = "rgba(255,255,255,.05)"; bgx.strokeRect(x + 5, y + 5, w - 10, h - 10);
+  const c = Math.max(6, w * 0.09);                         // metal corner protectors
+  for (const [cx, cy] of [[x, y], [x + w - c, y], [x, y + h - c], [x + w - c, y + h - c]]) {
+    const mg = bgx.createLinearGradient(cx, cy, cx + c, cy + c);
+    mg.addColorStop(0, "#8A8A94"); mg.addColorStop(1, "#45454D");
+    bgx.fillStyle = mg; bgx.fillRect(cx, cy, c, c);
+    bgx.fillStyle = "#2A2A30"; bgx.beginPath(); bgx.arc(cx + c / 2, cy + c / 2, c * 0.16, 0, 7); bgx.fill();
+  }
+}
+function woofer(cx, cy, r, k) {
+  // basket rim with bolts
+  bgx.fillStyle = "#2B2B31"; bgx.beginPath(); bgx.arc(cx, cy, r * 1.1, 0, 7); bgx.fill();
+  bgx.fillStyle = "#5C5C66";
+  for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 + Math.PI / 8;
+    bgx.beginPath(); bgx.arc(cx + Math.cos(a) * r * 1.04, cy + Math.sin(a) * r * 1.04, Math.max(1.2, r * 0.035), 0, 7); bgx.fill(); }
+  const pr = r * (1 + k * 0.06);                          // the cone pushes out on each kick
+  // rubber surround
+  const sg = bgx.createRadialGradient(cx - r * .2, cy - r * .2, pr * .7, cx, cy, pr);
+  sg.addColorStop(0, "#3B3B42"); sg.addColorStop(1, "#111114");
+  bgx.fillStyle = sg; bgx.beginPath(); bgx.arc(cx, cy, pr, 0, 7); bgx.fill();
+  // cone
+  const cg = bgx.createRadialGradient(cx - pr * .15, cy - pr * .2, pr * .1, cx, cy, pr * .86);
+  cg.addColorStop(0, `rgb(${58 + k * 25},${58 + k * 25},${64 + k * 25})`); cg.addColorStop(1, "#0A0A0C");
+  bgx.fillStyle = cg; bgx.beginPath(); bgx.arc(cx, cy, pr * .86, 0, 7); bgx.fill();
+  // dust cap with a shine
+  const dg = bgx.createRadialGradient(cx - pr * .1, cy - pr * .12, 1, cx, cy, pr * .3);
+  dg.addColorStop(0, "#77777F"); dg.addColorStop(.4, "#3A3A40"); dg.addColorStop(1, "#151517");
+  bgx.fillStyle = dg; bgx.beginPath(); bgx.arc(cx, cy, pr * .3, 0, 7); bgx.fill();
+  // faint laser reflection on the rim
+  bgx.save(); bgx.globalCompositeOperation = "lighter"; bgx.globalAlpha = .18 + k * .2;
+  bgx.strokeStyle = NEON[laserHue % NEON.length]; bgx.lineWidth = 1.5;
+  bgx.beginPath(); bgx.arc(cx, cy, pr, -2.6, -1.2); bgx.stroke(); bgx.restore();
+}
+function drawSpeakerStack({ x, y, w, h }, k) {
+  const topH = h * 0.44, gap = 4, subY = y + topH + gap, subH = h - topH - gap;
+  // top cabinet: compression horn + 12" woofer
+  cabinet(x, y, w, topH);
+  const hx = x + w * .14, hw = w * .72, hy = y + topH * .1, hh = topH * .26;
+  const hg = bgx.createLinearGradient(0, hy, 0, hy + hh);
+  hg.addColorStop(0, "#2E2E35"); hg.addColorStop(1, "#08080A");
+  bgx.fillStyle = hg;
+  bgx.beginPath(); bgx.moveTo(hx, hy); bgx.lineTo(hx + hw, hy); bgx.lineTo(hx + hw * .64, hy + hh); bgx.lineTo(hx + hw * .36, hy + hh); bgx.closePath(); bgx.fill();
+  bgx.strokeStyle = "#45454D"; bgx.lineWidth = 1.5; bgx.stroke();
+  bgx.fillStyle = "#050506"; bgx.fillRect(hx + hw * .42, hy + hh * .55, hw * .16, hh * .3);
+  woofer(x + w / 2, y + topH * .66, w * .3, k);
+  // subwoofer: 18" driver + bass port
+  cabinet(x, subY, w, subH);
+  woofer(x + w / 2, subY + subH * .44, w * .38, k * 1.3);
+  const portY = subY + subH * .84;
+  bgx.fillStyle = "#050506"; bgx.fillRect(x + w * .15, portY, w * .7, subH * .07);
+  bgx.strokeStyle = "#2E2E35"; bgx.lineWidth = 1; bgx.strokeRect(x + w * .15, portY, w * .7, subH * .07);
+}
+function playKick() {          // a short distorted hardstyle-ish kick, only when tapped
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    const t = audio.currentTime, o = audio.createOscillator(), g = audio.createGain(), sh = audio.createWaveShaper();
+    const curve = new Float32Array(256);
+    for (let i = 0; i < 256; i++) { const x = i / 128 - 1; curve[i] = Math.tanh(x * 6); }
+    sh.curve = curve;
+    o.frequency.setValueAtTime(190, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.22);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.6, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+    o.connect(sh); sh.connect(g); g.connect(audio.destination); o.start(t); o.stop(t + 0.5);
+  } catch (e) {}
+}
+$("stage").addEventListener("pointerdown", e => {
+  if (!M.final || state !== "running") return;
+  const hit = speakers().find(sp => e.clientX >= sp.x && e.clientX <= sp.x + sp.w && e.clientY >= sp.y && e.clientY <= sp.y + sp.h);
+  if (hit) {
+    boost = 1; playKick();
+    rings.push({ x: hit.x + hit.w / 2, y: hit.y + hit.h * 0.65, t: 0, c: NEON[laserHue % NEON.length] });
+  } else {
+    laserHue++; flash = 1;
+  }
+});
+
+// ---------- note envelope ----------
+function placeLetter() {
+  const nums = [...document.querySelectorAll(".num")].map(n => n.getBoundingClientRect());
+  const left = Math.min(...nums.map(r => r.left)), top = Math.min(...nums.map(r => r.top)), bottom = Math.max(...nums.map(r => r.bottom));
+  const k = $("kiss"), size = parseFloat(k.style.fontSize) || 30;
+  const space = left - (frame.x + 14);
+  const l = $("letter"); l.style.fontSize = size + "px";
+  l.style.left = Math.max(left - space / 2, left - size * 1.1) + "px";
+  l.style.top = (top + bottom) / 2 + "px";
+}
+$("letter").addEventListener("click", e => { e.stopPropagation(); $("note").classList.add("on"); });
+$("note").addEventListener("click", () => $("note").classList.remove("on"));
+$("stage").addEventListener("click", () => { if (sleeping) { sleeping = false; for (let i = 0; i < 3; i++) hearts.push({ x: W / 2 + (i - 1) * 30, y: frame.y - 20, life: 0 }); } });
+
 // ---------- countdown ----------
 const target = new Date(CONFIG.target).getTime();
 $("title").textContent = CONFIG.title;
@@ -581,6 +949,7 @@ $("done").textContent = CONFIG.doneMessage;
 const pad = n => String(n).padStart(2, "0");
 function updateCountdown() {
   const ms = target - Date.now();
+  computeMilestone(Math.max(0, Math.floor(ms / 86400000)), ms <= 0);
   if (ms <= 0) { finished = true; $("countdown").classList.add("finished"); return; }
   const s = Math.floor(ms / 1000);
   $("d").textContent = pad(Math.floor(s / 86400));
