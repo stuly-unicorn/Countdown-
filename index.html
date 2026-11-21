@@ -28,14 +28,7 @@
   /* arrival day: pet-colour split */
   body.msplit #stage{background:linear-gradient(90deg,var(--dog1) 0%,var(--dog2) 47%,var(--cat1) 53%,var(--cat2) 100%)}
   /* days 60, 50, 40, 30, 20: party! confetti dots + streamers */
-  body.mparty #stage{background-color:#FCEBEF;
-    background-image:
-      radial-gradient(#F2C94C 3px,transparent 4px),radial-gradient(#9EC5E8 3px,transparent 4px),
-      radial-gradient(#A8D5BA 3px,transparent 4px),radial-gradient(#C9B6E4 3px,transparent 4px),
-      radial-gradient(#E8A6B0 3px,transparent 4px),
-      repeating-linear-gradient(135deg,rgba(255,255,255,.55) 0 18px,transparent 18px 52px);
-    background-size:68px 68px,86px 86px,78px 78px,94px 94px,58px 58px,100% 100%;
-    background-position:0 0,34px 40px,18px 62px,60px 14px,44px 28px,0 0}
+  body.mparty #stage{background:#FFFBF8}
   body.milestone #title{color:var(--ink);background:rgba(255,255,255,.7);display:inline-block;padding:6px 10px;border-radius:6px}
   #marquee{position:absolute;left:50%;top:calc(42% - 70px);transform:translateX(-50%);z-index:3;display:none;
            font-size:clamp(11px,3vw,16px);color:#fff;background:var(--ink);border:3px solid #F6D6DA;border-radius:6px;
@@ -131,7 +124,7 @@
   @keyframes pulse{50%{transform:translate(-50%,-50%) scale(1.06)}}
   #curtain.open{pointer-events:none}
   #curtain.lift #valance{transform:translateY(-110%)}
-  #curtain.open #tap{opacity:0;transition:opacity .2s}
+  #curtain.open #tap,#curtain.open #marquee{opacity:0;transition:opacity .2s}
   .drape.away{transition:transform .8s ease-in}
   #curtain.gone{display:none}
 </style>
@@ -268,6 +261,7 @@ function resize() {
   placeKiss(f);
   placeLetter();
   stars = [];
+  partyBits = [];
   setupGlobe();
 }
 
@@ -290,7 +284,7 @@ function pointAt(d) {
   return segs[0][1](0);
 }
 
-function drawSprite(rows, pal, px, py, angle, scale, flip = false) {
+function drawSprite(rows, pal, px, py, angle, scale, flip = false, gridW = SPRITE_W) {
   const h = rows.length;
   ctx.save();
   ctx.translate(px, py);
@@ -300,7 +294,7 @@ function drawSprite(rows, pal, px, py, angle, scale, flip = false) {
     const ch = rows[r][c];
     if (ch === "." || !pal[ch]) continue;
     ctx.fillStyle = pal[ch];
-    ctx.fillRect(Math.round((c - SPRITE_W / 2) * scale), Math.round((r - h) * scale), Math.ceil(scale), Math.ceil(scale));
+    ctx.fillRect(Math.round((c - gridW / 2) * scale), Math.round((r - h) * scale), Math.ceil(scale), Math.ceil(scale));
   }
   ctx.restore();
 }
@@ -352,32 +346,116 @@ document.body.style.setProperty("--dog1", BG.dog[0]); document.body.style.setPro
 document.body.style.setProperty("--cat1", BG.cat[0]); document.body.style.setProperty("--cat2", BG.cat[1]);
 
 // Little extras drawn on the pets / screen
-const HAT = ["..y..", "..p..", ".ppp.", ".pwp.", "ppppp"];
-const HAT_PAL = { p: "#E8A6B0", w: "#FFFFFF", y: "#F2C94C" };
-function hatSprite(petRows, col, bottomRow) {          // hat placed in pet-sprite coordinates
-  const rows = [];
-  for (let r = 0; r < HAT.length; r++) rows.push(".".repeat(col - 2) + HAT[r]);
-  const pad = petRows.length - bottomRow - 1;
+// Colourful party hat, drawn with pixels half the size of the pets' (more detail).
+// Built from code: a striped cone with polka dots, a zigzag brim and a fluffy pom-pom.
+const HAT_PAL = { o: "#4A3A33", p: "#FF4F9A", b: "#2FA8F5", y: "#FFD23F", g: "#3DD26B", v: "#9B5CFF", w: "#FFFFFF", c: "#FFF4B8" };
+function buildHat() {
+  const Wd = 13, coneH = 12, rows = [];
+  // pom-pom
+  rows.push(".....cwc.....", "....wcwcw....", "....cwwwc....", ".....cwc.....");
+  for (let r = 0; r < coneH; r++) {
+    const half = 0.6 + r * 0.5, row = [];
+    for (let x = 0; x < Wd; x++) {
+      const dx = x - (Wd - 1) / 2 - 0.5 + 0.5;
+      if (Math.abs(dx) > half + 0.5) { row.push("."); continue; }
+      if (Math.abs(dx) > half - 0.5) { row.push("o"); continue; }
+      const stripe = Math.floor((x + r * 0.9) / 2.2) % 4;          // diagonal stripes
+      let ch = ["p", "b", "y", "v"][stripe];
+      if ((x * 7 + r * 3) % 11 === 0) ch = "w";                     // polka dots
+      row.push(ch);
+    }
+    rows.push(row.join(""));
+  }
+  // brim with zigzag
+  rows.push("o" + "g".repeat(Wd - 2) + "o");
+  rows.push("o" + Array.from({ length: Wd - 2 }, (_, i) => i % 2 ? "w" : "g").join("") + "o");
+  rows.push("o".repeat(Wd));
+  return rows;
+}
+const HAT_ROWS = buildHat();
+// place the hat (half-size pixels) so its brim sits on the pet's head
+function hatSprite(petRows, centerCol, brimRow) {
+  const cHalf = Math.round(centerCol * 2 + 1), left = cHalf - Math.floor(HAT_ROWS[0].length / 2);
+  const rows = HAT_ROWS.map(r => ".".repeat(Math.max(0, left)) + r);
+  const pad = petRows.length * 2 - (brimRow * 2 + 2);              // half-rows below the brim
   for (let i = 0; i < pad; i++) rows.push("");
   return rows;
 }
-const DOG_HAT = hatSprite(DOG[0], 12, -1);
-const CAT_HAT = hatSprite(CAT[0], 13, 0);
+const DOG_HAT = hatSprite(DOG[0], 11.5, 0);
+const CAT_HAT = hatSprite(CAT[0], 12.5, 0);
 function drawPet(kind, rows, x, y, a, scale, flip = false) {
   const isDog = kind === "dog";
   drawSprite(rows, isDog ? CONFIG.dog : CONFIG.cat, x, y, a, scale, flip);
   if (M.days === 60 || M.arrival) {
     const hat = isDog ? DOG_HAT : CAT_HAT;
-    drawSprite(hat, HAT_PAL, x, y, a, scale, flip);
+    drawSprite(hat, HAT_PAL, x, y, a, scale / 2, flip, SPRITE_W * 2);
   }
 }
 
 // Particles: confetti, fireworks, snow, stars
 let parts = [];
 const PASTELS = ["#E8A6B0", "#F2C94C", "#A8D5BA", "#9EC5E8", "#C9B6E4", "#FFFFFF"];
+// shiny foil confetti: [light, dark] pairs
+const FOIL = [["#FFE45C", "#F5A300"], ["#FF7EC0", "#E8197A"], ["#6FE3FF", "#0F9BE0"], ["#A8F56A", "#34B81E"],
+              ["#C79BFF", "#7631E8"], ["#FFAF5C", "#F2600F"], ["#FFFFFF", "#C4CAD4"]];
+function foil(g, x, y, w, h, rot, flip, pair, alpha) {   // one shiny rectangle, flipping as it spins
+  g.save(); g.translate(x, y); g.rotate(rot); g.scale(Math.max(.15, Math.abs(flip)), 1);
+  const grd = g.createLinearGradient(-w / 2, -h / 2, w / 2, h / 2);
+  const lit = flip > 0;
+  grd.addColorStop(0, lit ? pair[0] : pair[1]); grd.addColorStop(.5, lit ? "#FFFFFF" : pair[0]); grd.addColorStop(1, pair[1]);
+  g.globalAlpha = alpha; g.fillStyle = grd; g.fillRect(-w / 2, -h / 2, w, h);
+  g.restore();
+}
+// Background confetti: fills the screen around the globe + countdown frame,
+// and scatters away from the cursor / finger, then drifts back.
+let partyBits = [], cursor = null, lastParty = 0;
+function makePartyBits() {
+  partyBits = [];
+  const step = W < 520 ? 20 : 24, pad = 8;
+  const inFrame = (x, y) => x > frame.x - pad && x < frame.x + frame.w + pad && y > frame.y - pad - 14 * S && y < frame.y + frame.h + pad;
+  const inGlobe = (x, y) => Math.hypot(x - G.cx, y - G.cy) < G.r + pad;
+  for (let y = step / 2; y < H; y += step) for (let x = step / 2; x < W; x += step) {
+    const hx = x + (Math.random() - .5) * step * .9, hy = y + (Math.random() - .5) * step * .9;
+    if (inFrame(hx, hy) || inGlobe(hx, hy)) continue;
+    partyBits.push({ hx, hy, x: hx, y: hy, vx: 0, vy: 0, w: 9 + Math.random() * 6, h: 5 + Math.random() * 3,
+      rot: Math.random() * Math.PI, vr: 0, sp: .6 + Math.random() * 1.2, ph: Math.random() * 6,
+      pair: FOIL[Math.floor(Math.random() * FOIL.length)] });
+  }
+}
+function drawPartyBits(now) {
+  if (!partyBits.length) makePartyBits();
+  const dt = Math.min((now - lastParty) / 1000 || 0, 0.05); lastParty = now;
+  const R = W < 520 ? 70 : 110;                         // how far the cursor pushes
+  for (const b of partyBits) {
+    if (cursor) {
+      const dx = b.x - cursor.x, dy = b.y - cursor.y, d = Math.hypot(dx, dy);
+      if (d < R && d > 0.1) {
+        const f = (1 - d / R) * 2600;
+        b.vx += dx / d * f * dt; b.vy += dy / d * f * dt; b.vr += (Math.random() - .5) * f * dt * .02;
+      }
+    }
+    b.vx += (b.hx - b.x) * 6 * dt; b.vy += (b.hy - b.y) * 6 * dt;   // spring home
+    b.vx *= .9; b.vy *= .9; b.vr *= .93;
+    b.x += b.vx * dt; b.y += b.vy * dt; b.rot += b.vr * dt;
+    // cheap shine: flip between light and dark side, with a white glint when facing you
+    const flip = Math.cos(now / 700 * b.sp + b.ph);
+    bgx.save(); bgx.translate(b.x, b.y); bgx.rotate(b.rot + Math.sin(now / 2000 + b.ph) * .2);
+    bgx.scale(Math.max(.18, Math.abs(flip)), 1);
+    bgx.fillStyle = flip > 0 ? b.pair[0] : b.pair[1];
+    bgx.fillRect(-b.w / 2, -b.h / 2, b.w, b.h);
+    if (flip > .75) { bgx.fillStyle = "rgba(255,255,255,.85)"; bgx.fillRect(-b.w / 2, -b.h / 2, b.w * .45, b.h * .4); }
+    else if (flip < -.3) { bgx.fillStyle = "rgba(0,0,0,.08)"; bgx.fillRect(-b.w / 2, 0, b.w, b.h / 2); }
+    bgx.restore();
+  }
+}
+$("stage").addEventListener("pointermove", e => { cursor = { x: e.clientX, y: e.clientY }; });
+$("stage").addEventListener("pointerdown", e => { cursor = { x: e.clientX, y: e.clientY }; });
+$("stage").addEventListener("pointerleave", () => { cursor = null; });
+$("stage").addEventListener("pointerup", e => { if (e.pointerType !== "mouse") cursor = null; });
 function confetti(n = 70) {
   for (let i = 0; i < n; i++) parts.push({ x: W / 2 + (Math.random() - .5) * 80, y: H * .35, vx: (Math.random() - .5) * 420,
-    vy: -Math.random() * 380 - 120, g: 420, life: 0, max: 2.6, c: PASTELS[i % PASTELS.length], s: 3 + Math.random() * 3 });
+    vy: -Math.random() * 380 - 120, g: 420, life: 0, max: 2.8, s: 5 + Math.random() * 4,
+    foil: FOIL[i % FOIL.length], rot: Math.random() * 6, spin: (Math.random() - .5) * 10, ph: Math.random() * 6 });
 }
 function firework() {
   const x = W * (.15 + Math.random() * .7), y = H * (.12 + Math.random() * .3), c = PASTELS[Math.floor(Math.random() * 5)];
@@ -429,8 +507,11 @@ function drawExtras(now, dt) {
   parts = parts.filter(p => p.life < p.max);
   for (const p of parts) {
     p.life += dt; p.vy += p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt;
-    ctx.globalAlpha = Math.max(0, 1 - p.life / p.max); ctx.fillStyle = p.c;
-    ctx.fillRect(p.x, p.y, p.s, p.s);
+    const a = Math.max(0, 1 - p.life / p.max);
+    if (p.foil) {                                   // shiny confetti: drifts down with air drag
+      p.vx *= .985; if (p.vy > 90) p.vy = 90; p.rot += p.spin * dt;
+      foil(ctx, p.x, p.y, p.s * 1.6, p.s, p.rot, Math.cos(p.life * 9 + p.ph), p.foil, a);
+    } else { ctx.globalAlpha = a; ctx.fillStyle = p.c; ctx.fillRect(p.x, p.y, p.s, p.s); }
   }
   ctx.globalAlpha = 1;
 }
@@ -759,6 +840,7 @@ function drawGlobe(now) {
   bgx.restore();
   bgx.globalAlpha = 1;
   if (M.final) drawRaveFront(now);
+  if (M.ten && M.days >= 20) drawPartyBits(now);   // confetti sits on top of the globe
 }
 
 
