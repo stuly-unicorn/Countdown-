@@ -173,7 +173,7 @@ const CONFIG = {
   milestoneBg: { dog: ["#B08A68", "#EBCB7E"], cat: ["#F7F4EF", "#B5B2AE"] },
   // Notes that unlock on each day (days left → note). Leave "" for no note.
   notes: {
-    60: "", 50: "", 40: "", 30: "", 20: "",
+    60: "I cant believe we missed 67 and 69...one of them we can at least fix tho :D", 50: "", 40: "", 30: "", 20: "",
     10: "", 9: "", 8: "", 7: "", 6: "", 5: "", 4: "", 3: "", 2: "", 1: "",
     0: "",
   },
@@ -458,6 +458,72 @@ $("stage").addEventListener("pointermove", e => { cursor = { x: e.clientX, y: e.
 $("stage").addEventListener("pointerdown", e => { cursor = { x: e.clientX, y: e.clientY }; });
 $("stage").addEventListener("pointerleave", () => { cursor = null; });
 $("stage").addEventListener("pointerup", e => { if (e.pointerType !== "mouse") cursor = null; });
+// ---------- confetti cannons in each corner (party days) ----------
+let cannonBits = [], cannonFired = [0, 0, 0, 0], lastCannon = 0;
+function cannonSpots() {
+  const L = Math.max(46, Math.min(W, H) * 0.1), m = -L * 0.08;   // tucked into the corners, about half showing
+  return [[m, m], [W - m, m], [m, H - m], [W - m, H - m]].map(([x, y]) => ({ x, y, L, a: Math.atan2(H / 2 - y, W / 2 - x) }));
+}
+function fireCannon(i, now) {
+  const c = cannonSpots()[i];
+  cannonFired[i] = now;
+  const mx = c.x + Math.cos(c.a) * c.L * .75, my = c.y + Math.sin(c.a) * c.L * .75;
+  for (let k = 0; k < 55; k++) {
+    const a = c.a + (Math.random() - .5) * .7, v = 380 + Math.random() * 620;
+    cannonBits.push({ x: mx, y: my, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0, max: 2.6 + Math.random(),
+      w: 8 + Math.random() * 6, h: 5 + Math.random() * 3, rot: Math.random() * 6, spin: (Math.random() - .5) * 14,
+      ph: Math.random() * 6, pair: FOIL[Math.floor(Math.random() * FOIL.length)] });
+  }
+}
+function drawCannons(now) {
+  const dt = Math.min((now - lastCannon) / 1000 || 0, 0.05); lastCannon = now;
+  const spots = cannonSpots();
+  spots.forEach((c, i) => {                               // each fires every ~4 s, staggered
+    if (now - cannonFired[i] > 4000 + i * 37 && (now / 1000 + i) % 4 < 0.05) fireCannon(i, now);
+  });
+  // flying confetti
+  cannonBits = cannonBits.filter(b => b.life < b.max);
+  for (const b of cannonBits) {
+    b.life += dt; b.vy += 380 * dt; b.vx *= .975; b.vy *= .985;
+    const term = 60 + (b.ph / 6) * 90; if (b.vy > term) b.vy = term;
+    b.x += (b.vx + Math.sin(b.life * 3 + b.ph) * 30) * dt; b.y += b.vy * dt; b.rot += b.spin * dt;
+    foil(bgx, b.x, b.y, b.w, b.h, b.rot, Math.cos(b.life * 8 + b.ph), b.pair, Math.min(1, (b.max - b.life) * 2));
+  }
+  // the cannons themselves
+  spots.forEach((c, i) => {
+    const age = (now - cannonFired[i]) / 1000, recoil = age < .3 ? (1 - age / .3) * c.L * .15 : 0;
+    const L = c.L, D = L * .42;
+    bgx.save(); bgx.translate(c.x, c.y); bgx.rotate(c.a); bgx.translate(-recoil, 0);
+    // cone (party-popper shape, glossy pink with gold spiral stripes)
+    bgx.beginPath(); bgx.moveTo(-L * .25, -D * .1); bgx.lineTo(L * .75, -D * .62); bgx.lineTo(L * .75, D * .62); bgx.lineTo(-L * .25, D * .1); bgx.closePath();
+    const g = bgx.createLinearGradient(0, -D / 2, 0, D / 2);
+    g.addColorStop(0, "#FF9CCB"); g.addColorStop(.35, "#FFE3F0"); g.addColorStop(.6, "#F0559A"); g.addColorStop(1, "#B8246A");
+    bgx.fillStyle = g; bgx.fill();
+    bgx.save(); bgx.clip();
+    bgx.strokeStyle = "rgba(255,214,77,.9)"; bgx.lineWidth = D * .16;
+    for (let k = -L * .3; k < L; k += L * .22) { bgx.beginPath(); bgx.moveTo(k, -D); bgx.lineTo(k + D * .7, D); bgx.stroke(); }
+    bgx.restore();
+    bgx.beginPath(); bgx.moveTo(-L * .25, -D * .1); bgx.lineTo(L * .75, -D * .62); bgx.lineTo(L * .75, D * .62); bgx.lineTo(-L * .25, D * .1); bgx.closePath();
+    bgx.strokeStyle = "#7A1F4B"; bgx.lineWidth = 2; bgx.stroke();
+    // gold rim + dark mouth
+    bgx.fillStyle = "#F5C542"; bgx.fillRect(L * .68, -D * .68, L * .1, D * 1.36);
+    bgx.fillStyle = "#3A1028"; bgx.beginPath(); bgx.ellipse(L * .78, 0, L * .05, D * .56, 0, 0, 7); bgx.fill();
+    // base
+    bgx.fillStyle = "#8C6BD6"; bgx.beginPath(); bgx.arc(-L * .25, 0, D * .2, 0, 7); bgx.fill();
+    bgx.fillStyle = "#C9B3FF"; bgx.beginPath(); bgx.arc(-L * .27, -D * .05, D * .08, 0, 7); bgx.fill();
+    // muzzle flash puff
+    if (age < .25) {
+      bgx.globalAlpha = 1 - age / .25; bgx.fillStyle = "#FFF6C2";
+      bgx.beginPath(); bgx.arc(L * .85 + age * L, 0, D * (.4 + age * 2), 0, 7); bgx.fill(); bgx.globalAlpha = 1;
+    }
+    bgx.restore();
+  });
+}
+$("stage").addEventListener("pointerdown", e => {          // tap a cannon to fire it
+  if (!(M.ten && M.days >= 20) || state !== "running") return;
+  cannonSpots().forEach((c, i) => { if (Math.hypot(e.clientX - c.x, e.clientY - c.y) < c.L) fireCannon(i, performance.now()); });
+});
+
 function confetti(n = 70) {
   for (let i = 0; i < n; i++) parts.push({ x: W / 2 + (Math.random() - .5) * 80, y: H * .35, vx: (Math.random() - .5) * 420,
     vy: -Math.random() * 380 - 120, g: 420, life: 0, max: 2.8, s: 5 + Math.random() * 4,
@@ -515,7 +581,8 @@ function drawExtras(now, dt) {
     p.life += dt; p.vy += p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt;
     const a = Math.max(0, 1 - p.life / p.max);
     if (p.foil) {                                   // shiny confetti: drifts down with air drag
-      p.vx *= .985; if (p.vy > 90) p.vy = 90; p.rot += p.spin * dt;
+      p.vx *= .985; const term = 50 + (p.ph / 6) * 90; if (p.vy > term) p.vy = term;
+      p.x += Math.sin(p.life * 3 + p.ph) * 30 * dt; p.rot += p.spin * dt;
       foil(ctx, p.x, p.y, p.s * 1.6, p.s, p.rot, Math.cos(p.life * 9 + p.ph), p.foil, a);
     } else { ctx.globalAlpha = a; ctx.fillStyle = p.c; ctx.fillRect(p.x, p.y, p.s, p.s); }
   }
@@ -878,7 +945,7 @@ function drawGlobe(now) {
   bgx.restore();
   bgx.globalAlpha = 1;
   if (M.final) drawRaveFront(now);
-  if (M.ten && M.days >= 20) drawPartyBits(now);   // confetti sits on top of the globe
+  if (M.ten && M.days >= 20) { drawPartyBits(now); drawCannons(now); }   // confetti sits on top of the globe
 }
 
 
