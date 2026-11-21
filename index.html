@@ -38,6 +38,9 @@
   /* special days: the day sign replaces the "tap to open" button */
   #curtain.special #tap{display:none}
   #curtain.special #marquee{top:42%;transform:translate(-50%,-50%);font-size:clamp(12px,3.4vw,18px);padding:14px 18px}
+  #heart,#scroll{position:absolute;z-index:2;border:0;background:none;cursor:pointer;line-height:1;padding:4px;
+          transform:translate(-50%,-50%);-webkit-tap-highlight-color:transparent;animation:kissfloat 2.6s ease-in-out infinite;opacity:.9}
+  #heart{animation-delay:.4s} #scroll{animation-delay:1.2s;display:none} #scroll.on{display:block}
   #letter{position:absolute;z-index:2;border:0;background:none;cursor:pointer;line-height:1;padding:4px;display:none;
           transform:translate(-50%,-50%);-webkit-tap-highlight-color:transparent;animation:kissfloat 2.6s ease-in-out infinite .8s}
   #letter.on{display:block}
@@ -144,6 +147,8 @@
   </div>
   <button id="kiss" aria-label="send a kiss">😘</button>
   <button id="letter" aria-label="open your note">💌</button>
+  <button id="heart" aria-label="a reminder">❤️</button>
+  <button id="scroll" aria-label="fun fact">📜</button>
 </div>
 
 <canvas id="c"></canvas>
@@ -171,6 +176,13 @@ const CONFIG = {
   dog: { o: "#7A5C47", b: "#EBCFA6", w: "#F8EBD3", d: "#D6A877", k: "#3A2A22" },
   // Milestone-day background: left half (dog) and right half (cat)
   milestoneBg: { dog: ["#B08A68", "#EBCB7E"], cat: ["#F7F4EF", "#B5B2AE"] },
+  // ❤️ always there: tap for this message
+  heartNote: "reminder that I love you the most",
+  // 📜 fun facts about the number of days left (days left → list of facts)
+  funFacts: {
+    60: ["60 is the smallest number that divides evenly by 1, 2, 3, 4, 5 and 6",
+         "Every interior angle of an equilateral triangle is 60 degrees"],
+  },
   // Notes that unlock on each day (days left → note). Leave "" for no note.
   notes: {
     60: "I cant believe we missed 67 and 69...one of them we can at least fix tho :D", 50: "", 40: "", 30: "", 20: "",
@@ -324,6 +336,7 @@ const PREVIEW = (() => {
   return m ? +m[1] : null;
 })();
 const M = { days: null, ten: false, final: false, arrival: false };
+let currentNote = "";
 function computeMilestone(realDays, done) {
   const d = PREVIEW ?? (done ? 0 : realDays);
   M.days = d;
@@ -342,8 +355,8 @@ function computeMilestone(realDays, done) {
   $("curtain").classList.toggle("special", !!bgClass);
   const note = CONFIG.notes[d] || (PREVIEW !== null ? `(your note for day ${d} goes here)` : "");
   $("letter").classList.toggle("on", !!note && (M.ten || M.final || M.arrival));
-  $("note").querySelector(".head").textContent = d === 0 ? "♥ today ♥" : `♥ ${d} day${d === 1 ? "" : "s"} to go ♥`;
-  $("note").querySelector(".body").textContent = note;
+  currentNote = note;
+  $("scroll").classList.toggle("on", !!(CONFIG.funFacts[d] && CONFIG.funFacts[d].length));
 }
 const BG = CONFIG.milestoneBg;
 document.body.style.setProperty("--dog1", BG.dog[0]); document.body.style.setProperty("--dog2", BG.dog[1]);
@@ -950,15 +963,15 @@ function drawGlobe(now) {
 
 
 // ---------- kiss button ----------
+// The four little buttons sit in the inside corners of the frame:
+// 💌 top-left · 😘 top-right · ❤️ bottom-left · 📜 bottom-right
 function placeKiss(f) {
-  const k = $("kiss"), nums = [...document.querySelectorAll(".num")].map(n => n.getBoundingClientRect());
-  const u = { right: Math.max(...nums.map(r => r.right)), top: Math.min(...nums.map(r => r.top)), bottom: Math.max(...nums.map(r => r.bottom)) };
-  u.height = u.bottom - u.top;
-  const space = (frame.x + frame.w - 14) - u.right;      // room between timer and frame edge
-  const size = Math.max(22, Math.min(f * 1.15, space - 10));
-  k.style.fontSize = size + "px";
-  k.style.left = Math.min(u.right + space / 2, u.right + size * 1.1) + "px";
-  k.style.top = (u.top + u.height / 2) + "px";
+  const size = Math.max(24, Math.min(f * 0.95, 46));
+  const inset = 22 + size / 2 + Math.min(frame.r * 0.3, 10);
+  const L = frame.x + inset, R = frame.x + frame.w - inset, T = frame.y + inset, B = frame.y + frame.h - inset;
+  for (const [id, x, y] of [["letter", L, T], ["kiss", R, T], ["heart", L, B], ["scroll", R, B]]) {
+    const el = $(id); el.style.fontSize = size + "px"; el.style.left = x + "px"; el.style.top = y + "px";
+  }
 }
 $("kiss").addEventListener("click", e => {
   const k = $("kiss");
@@ -1116,16 +1129,20 @@ $("stage").addEventListener("pointerdown", e => {
 });
 
 // ---------- note envelope ----------
-function placeLetter() {
-  const nums = [...document.querySelectorAll(".num")].map(n => n.getBoundingClientRect());
-  const left = Math.min(...nums.map(r => r.left)), top = Math.min(...nums.map(r => r.top)), bottom = Math.max(...nums.map(r => r.bottom));
-  const k = $("kiss"), size = parseFloat(k.style.fontSize) || 30;
-  const space = left - (frame.x + 14);
-  const l = $("letter"); l.style.fontSize = size + "px";
-  l.style.left = Math.max(left - space / 2, left - size * 1.1) + "px";
-  l.style.top = (top + bottom) / 2 + "px";
+function placeLetter() {}   // (all corner buttons are placed in placeKiss)
+function openCard(head, body) {
+  $("note").querySelector(".head").textContent = head;
+  $("note").querySelector(".body").textContent = body;
+  $("note").classList.add("on");
 }
-$("letter").addEventListener("click", e => { e.stopPropagation(); $("note").classList.add("on"); });
+const dayHead = d => d === 0 ? "♥ today ♥" : `♥ ${d} day${d === 1 ? "" : "s"} to go ♥`;
+$("letter").addEventListener("click", e => { e.stopPropagation(); openCard(dayHead(M.days), currentNote); });
+$("heart").addEventListener("click", e => { e.stopPropagation(); openCard("♥", CONFIG.heartNote); });
+$("scroll").addEventListener("click", e => {
+  e.stopPropagation();
+  const facts = CONFIG.funFacts[M.days] || [];
+  openCard(`✨ fun facts about ${M.days} ✨`, facts.map(f => "• " + f).join("\n\n"));
+});
 $("note").addEventListener("click", () => $("note").classList.remove("on"));
 $("stage").addEventListener("click", () => { if (sleeping) { sleeping = false; for (let i = 0; i < 3; i++) hearts.push({ x: W / 2 + (i - 1) * 30, y: frame.y - 20, life: 0 }); } });
 
